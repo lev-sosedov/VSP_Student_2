@@ -11,6 +11,7 @@ class AuthUser(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String, unique=True, nullable=False, index=True)
+    user_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="USER", nullable=False)
     is_active = Column(Boolean, default=True)

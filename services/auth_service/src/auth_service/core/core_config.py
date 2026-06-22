@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 
-    USER_SERVICE_URL: str
+    # USER_SERVICE_URL: str
+    DATABASE_URL: str
 
     BCRYPT_ROUNDS: int = 12
 

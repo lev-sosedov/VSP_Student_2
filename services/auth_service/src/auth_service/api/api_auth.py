@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from auth_service.core.deps import get_current_user
 from auth_service.schemas.schemas_auth import (
     RegisterRequest,
     LoginRequest,
@@ -8,16 +10,10 @@ from auth_service.schemas.schemas_auth import (
 )
 
 from auth_service.services.auth_service import AuthService
+from auth_service.db.session import get_db
 
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Auth"]
-)
-
-
-service = AuthService()
-
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 # REGISTER
@@ -50,8 +46,11 @@ service = AuthService()
     }
 )
 async def register(
-    data: RegisterRequest
+    data: RegisterRequest,
+    db: AsyncSession = Depends(get_db)
 ):
+
+    service = AuthService(db)
 
     try:
 
@@ -98,8 +97,11 @@ async def register(
     }
 )
 async def login(
-    data: LoginRequest
+    data: LoginRequest,
+    db: AsyncSession = Depends(get_db)
 ):
+
+    service = AuthService(db)
 
     try:
 
@@ -139,8 +141,11 @@ async def login(
     }
 )
 async def refresh(
-    data: RefreshRequest
+    data: RefreshRequest,
+    db: AsyncSession = Depends(get_db)
 ):
+
+    service = AuthService(db)
 
     try:
 
@@ -183,3 +188,10 @@ async def logout():
     return {
         "message": "logout endpoint"
     }
+
+
+@router.get("/me")
+async def me(
+    user=Depends(get_current_user)
+):
+    return user

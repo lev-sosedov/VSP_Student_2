@@ -21,7 +21,6 @@ class UserService:
 
         user = User(
             phone_number=data.phone_number,
-            hashed_password=data.password,  # уже хэш!
             user_name=data.user_name,
             role=RoleType.USER
         )

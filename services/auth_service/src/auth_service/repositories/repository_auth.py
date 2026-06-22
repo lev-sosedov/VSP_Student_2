@@ -6,10 +6,8 @@ from auth_service.models.auth_user import AuthUser
 
 class AuthRepository:
 
-
     def __init__(self, db: AsyncSession):
         self.db = db
-
 
 
     async def get_user_by_phone(self, phone_number: str):
@@ -19,9 +17,15 @@ class AuthRepository:
 
 
 
-    async def create_user(self, phone_number: str, hashed_password: str,role: str = "USER"):
-        user = AuthUser(phone_number=phone_number,hashed_password=hashed_password,role=role)
+    async def create_user(self, data: dict):
+        user = AuthUser(
+            phone_number=data["phone_number"],
+            user_name=data.get("user_name"),
+            hashed_password=data["hashed_password"]
+        )
+
         self.db.add(user)
+
         await self.db.commit()
         await self.db.refresh(user)
 

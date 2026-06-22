@@ -8,7 +8,6 @@ from common.utils.enum_role import RoleType
 # создание пользователя (из auth_service)
 class UserCreate(BaseModel):
     phone_number: str
-    password: str  # уже ХЭШ!
     user_name: Optional[str] = None
 
 

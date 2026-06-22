@@ -54,3 +54,33 @@ def verify_token_type(payload: dict, token_type: str):
     if payload.get("type") != token_type:
         raise HTTPException(status_code=401, detail="Wrong token type")
     return True
+
+
+# функция декодирования JWT
+# декодирует JWT
+# проверяет подпись
+# проверяет type == access
+# возвращает payload или None
+
+# def decode_token(token: str):
+#     return jwt.decode(
+#         token,
+#         settings.JWT_SECRET_KEY,
+#         algorithms=[settings.JWT_ALGORITHM]
+#     )
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM]
+        )
+
+        if payload.get("type") != "access":
+            raise ValueError("Invalid token type")
+
+        return payload
+
+    except JWTError:
+        return None

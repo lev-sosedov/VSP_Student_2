@@ -10,9 +10,15 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - rabbitmq
-      - redis
+
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_started
+
+      redis:
+        condition: service_started
 
   user-service:
     build:
@@ -24,9 +30,14 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - postgres
-      - rabbitmq
-      - redis
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_started
+
+      redis:
+        condition: service_started
 
   postgres:
     image: postgres:16
@@ -39,6 +50,12 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:3-management

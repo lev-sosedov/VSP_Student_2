@@ -1,6 +1,27 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-from user_service.api.users  import router as user_router
+from user_service.db.session import engine
+from user_service.db.base import Base
+
+from user_service.models.user import User
+
+
+from user_service.api.users import router as user_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    print("Creating database tables...")
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    print("Database tables ready")
+
+    yield
+
 
 app = FastAPI(
     title="VSH Student - User Service",
@@ -22,6 +43,7 @@ User Service микросервиса платформы ВШП Студент.
 Auth выполняется через auth-service.
 """,
     version="1.0.0",
+    lifespan=lifespan
 )
 
 
@@ -29,7 +51,10 @@ Auth выполняется через auth-service.
 # API ROUTES
 # ==========================
 
-app.include_router(user_router,prefix="/api/v1")
+app.include_router(
+    user_router,
+    prefix="/api/v1"
+)
 
 
 # ==========================
@@ -52,4 +77,17 @@ async def health_check():
     return {
         "service": "user-service",
         "status": "ok"
+    }
+
+
+@app.get(
+    "/",
+    tags=["System"],
+    summary="Корень сервиса"
+)
+async def root():
+
+    return {
+        "status": "ok",
+        "service": "user-service"
     }

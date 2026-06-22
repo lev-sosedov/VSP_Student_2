@@ -10,7 +10,6 @@ class User(Base):
 
     # === ЛОГИН ===
     phone_number = Column(String(20), unique=True, nullable=False) # номер телефона пользователя
-    hashed_password = Column(String(255), nullable=False) # пароль
 
     # === ОСНОВНОЕ ===
     user_name = Column(String(20), unique=True, nullable=True) # имя (не никнейм)
