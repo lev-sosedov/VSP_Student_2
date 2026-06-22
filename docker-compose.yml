@@ -1,0 +1,57 @@
+services:
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth_service/Dockerfile
+    container_name: auth-service
+    env_file:
+      - ./services/auth_service/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user_service/Dockerfile
+    container_name: user-service
+    env_file:
+      - ./services/user_service/.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vsp
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
