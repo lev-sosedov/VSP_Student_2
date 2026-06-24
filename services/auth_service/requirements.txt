@@ -12,3 +12,5 @@ pydantic-settings
 
 sqlalchemy
 asyncpg
+
+aio-pika

@@ -5,7 +5,7 @@ from datetime import date, datetime
 from common.utils.enum_role import RoleType
 
 
-# создание пользователя (из auth_service)
+# создание пользователя (из user_service)
 class UserCreate(BaseModel):
     phone_number: str
     user_name: Optional[str] = None

@@ -15,37 +15,37 @@ from user_service.schemas.user import (
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post(
-    "/",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Создание пользователя",
-    description="""
-Создание нового пользователя.
-
-Используется:
-- auth-service после регистрации
-- admin-service для создания аккаунтов
-
-По умолчанию пользователь получает роль USER.
-""",
-    response_description="Созданный пользователь"
-)
-async def create_user(
-    data: UserCreate,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-    try:
-        return await service.create_user(data)
-
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
+# @router.post(
+#     "/",
+#     response_model=UserResponse,
+#     status_code=status.HTTP_201_CREATED,
+#     summary="Создание пользователя",
+#     description="""
+# Создание нового пользователя.
+#
+# Используется:
+# - auth-service после регистрации
+# - admin-service для создания аккаунтов
+#
+# По умолчанию пользователь получает роль USER.
+# """,
+#     response_description="Созданный пользователь"
+# )
+# async def create_user(
+#     data: UserCreate,
+#     db: AsyncSession = Depends(get_db)
+# ):
+#
+#     service = UserService(db)
+#
+#     try:
+#         return await service.create_user(data)
+#
+#     except ValueError as e:
+#         raise HTTPException(
+#             status_code=400,
+#             detail=str(e)
+#         )
 
 
 

@@ -5,6 +5,7 @@ from auth_service.api.api_auth import router as auth_router
 from auth_service.db.session import engine
 from auth_service.db.base import Base
 from auth_service.models.auth_user import AuthUser
+from auth_service.messaging.rabbit import publish_user_created
 
 
 @asynccontextmanager

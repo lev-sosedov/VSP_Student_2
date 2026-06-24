@@ -5,6 +5,7 @@ from common.utils.enum_role import RoleType
 from user_service.repositories.user_repository import UserRepository
 from user_service.models.user import User
 from user_service.schemas.user import UserCreate, UserUpdate
+from user_service.schemas.events import UserCreatedEvent
 
 
 class UserService:
@@ -20,6 +21,21 @@ class UserService:
             raise ValueError("User already exists")
 
         user = User(
+            phone_number=data.phone_number,
+            user_name=data.user_name,
+            role=RoleType.USER
+        )
+
+        return await self.repo.create(user)
+
+    async def create_user_from_event(self, data: UserCreatedEvent):
+        existing = await self.repo.get_by_phone(data.phone_number)
+
+        if existing:
+            return existing
+
+        user = User(
+            auth_id=data.auth_id,
             phone_number=data.phone_number,
             user_name=data.user_name,
             role=RoleType.USER
@@ -103,12 +119,3 @@ class UserService:
 
         return True
 
-    # create_user()       +
-    # get_user()          +
-    # get_users()         +
-    # update_user()       +
-    # delete_user()       +
-    # change_role()       +
-    # activate_user()     +
-    # block_user()        +
-    # verify_user()       +
