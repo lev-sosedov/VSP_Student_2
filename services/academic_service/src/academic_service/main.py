@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
-from academic_service.api import groups
-from academic_service.api import directions
-from academic_service.api import branches
+from academic_service.api import group
+from academic_service.api import direction
+from academic_service.api import branch
 
 from academic_service.core.database import engine
 from academic_service.models.base import Base

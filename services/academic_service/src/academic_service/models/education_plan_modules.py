@@ -15,3 +15,4 @@ class EducationPlanModule(Base):
     order_number = Column(Integer, nullable=False) # порядок прохождения модуля
 
     education_plan = relationship("EducationPlan", back_populates="modules") # связь с учебным планом
+    module = relationship("Module", back_populates="plans") # связь с модулем
