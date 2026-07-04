@@ -157,7 +157,25 @@ async def exists_link(
 
 
 
+# Получить все связи
+@router.get(
+    "/",
+    response_model=EducationPlanModuleListResponse
+)
+async def get_all_links(
+        limit: int = Query(20, ge=1),
+        offset: int = Query(0, ge=0),
+        service: EducationPlanModuleService = Depends(get_service)
+):
+    links = await service.get_all(
+        limit=limit,
+        offset=offset
+    )
 
+    return {
+        "items": links,
+        "total": len(links)
+    }
 
 
 

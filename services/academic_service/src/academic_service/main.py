@@ -1,50 +1,141 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from academic_service.api import group
-from academic_service.api import direction
-from academic_service.api import branch
+from academic_service.db.base import Base
+from academic_service.db.session import engine
 
-from academic_service.core.database import engine
-from academic_service.models.base import Base
+from academic_service.api.module import router as module_router
+from academic_service.api.education_plan import router as education_plan_router
+from academic_service.api.education_plan_module import router as education_plan_module_router
+from academic_service.api.direction import router as direction_router
+from academic_service.api.group import router as group_router
+from academic_service.api.group_member import router as group_member_router
+from academic_service.api.branch import router as branch_router
+from academic_service.api.branch_address import router as branch_address_router
+from academic_service.db import init_models
+from academic_service.events.consumer import academic_consumer
+from academic_service.messaging.rabbit import RabbitConnection
 
+
+API_PREFIX = "/api/v1"
+
+
+# =====================================================
+# LIFESPAN
+# =====================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    print("🚀 Starting Academic Service...")
+
+    # =========================
+    # Database
+    # =========================
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    print("📦 Database tables created")
+
+    # =========================
+    # RabbitMQ
+    # =========================
+
+    try:
+
+        await academic_consumer.start()
+
+        print("🐰 RabbitMQ consumer started")
+
+    except Exception as e:
+
+        print(f"❌ RabbitMQ startup failed: {e}")
+
+    print("✅ Academic Service started")
+
+    yield
+
+    # =========================
+    # Graceful shutdown
+    # =========================
+
+    print("🛑 Stopping Academic Service...")
+
+    try:
+        await academic_consumer.stop()
+    except Exception as e:
+        print(f"Consumer shutdown error: {e}")
+
+    try:
+        await RabbitConnection.close()
+    except Exception as e:
+        print(f"RabbitMQ shutdown error: {e}")
+
+    print("✅ Academic Service stopped")
+
+
+# =====================================================
+# APP
+# =====================================================
 
 app = FastAPI(
     title="Academic Service",
-    version="1.0"
+    description="""
+Academic Service микросервиса платформы ВШП Студент.
+
+Отвечает за:
+- филиалы
+- адреса филиалов
+- направления
+- учебные планы
+- модули
+- группы
+- участников групп
+
+Не отвечает за:
+- пользователей
+- авторизацию
+- JWT
+- платежи
+
+Все пользователи получаются из user-service.
+""",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 
-@app.on_event("startup")
-async def startup():
+# =====================================================
+# ROUTES
+# =====================================================
 
-    print("Creating academic tables...")
-
-    async with engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.create_all
-        )
-
-
-app.include_router(
-    groups.router,
-    prefix="/api/v1/groups",
-    tags=["Groups"]
-)
+app.include_router(module_router, prefix=API_PREFIX)
+app.include_router(education_plan_router, prefix=API_PREFIX)
+app.include_router(education_plan_module_router, prefix=API_PREFIX)
+app.include_router(direction_router, prefix=API_PREFIX)
+app.include_router(group_router, prefix=API_PREFIX)
+app.include_router(group_member_router, prefix=API_PREFIX)
+app.include_router(branch_router, prefix=API_PREFIX)
+app.include_router(branch_address_router, prefix=API_PREFIX)
 
 
-app.include_router(
-    directions.router,
-    prefix="/api/v1/directions",
-    tags=["Directions"]
-)
+# =====================================================
+# ROOT
+# =====================================================
+
+@app.get("/")
+async def root():
+    return {
+        "service": "academic-service",
+        "status": "ok"
+    }
 
 
-app.include_router(
-    branches.router,
-    prefix="/api/v1/branches",
-    tags=["Branches"]
-)
-
+# =====================================================
+# HEALTH
+# =====================================================
 
 @app.get("/health")
 async def health():

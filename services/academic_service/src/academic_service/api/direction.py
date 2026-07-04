@@ -216,6 +216,21 @@ async def exists(
 
 
 
+# Детальная информация о направлении
+@router.get(
+    "/{direction_id}/detail",
+    response_model=DirectionDetailResponse
+)
+async def get_direction_detail(
+        direction_id: int,
+        service: DirectionService = Depends(get_service)
+):
+    direction = await service.get_by_id(direction_id)
+
+    return direction
+
+
+
 # Удаление направления
 @router.delete(
     "/{direction_id}"
@@ -227,3 +242,4 @@ async def delete_direction(
     return await service.delete_direction(
         direction_id
     )
+

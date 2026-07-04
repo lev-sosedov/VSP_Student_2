@@ -4,13 +4,18 @@ services:
     build:
       context: .
       dockerfile: services/auth_service/Dockerfile
+
     container_name: auth-service
+
+    restart: unless-stopped
+
     env_file:
       - ./services/auth_service/.env
+
     ports:
       - "8000:8000"
-    depends_on:
 
+    depends_on:
       postgres:
         condition: service_healthy
 
@@ -18,17 +23,23 @@ services:
         condition: service_healthy
 
       redis:
-        condition: service_started
+        condition: service_healthy
 
   user-service:
     build:
       context: .
       dockerfile: services/user_service/Dockerfile
+
     container_name: user-service
+
+    restart: unless-stopped
+
     env_file:
       - ./services/user_service/.env
+
     ports:
       - "8001:8001"
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,44 +48,94 @@ services:
         condition: service_healthy
 
       redis:
-        condition: service_started
+        condition: service_healthy
+
+
+  academic-service:
+    build:
+      context: .
+      dockerfile: services/academic_service/Dockerfile
+
+    container_name: academic-service
+
+    restart: unless-stopped
+
+    env_file:
+      - ./services/academic_service/.env
+
+    ports:
+      - "8002:8002"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
 
   postgres:
     image: postgres:16
+
     container_name: postgres
+
+    restart: unless-stopped
+
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: vsp
+
     ports:
       - "5433:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+
   rabbitmq:
     image: rabbitmq:3-management
+
     container_name: rabbitmq
+
+    restart: unless-stopped
+
     ports:
       - "5672:5672"
       - "15672:15672"
 
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+
   redis:
     image: redis:7
+
     container_name: redis
+
+    restart: unless-stopped
+
     ports:
       - "6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 
 volumes:
   postgres_data:

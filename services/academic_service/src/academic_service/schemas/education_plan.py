@@ -33,6 +33,16 @@ class EducationPlanPatch(BaseModel):
     is_active: Optional[bool] = None
 
 
+# Закрытие учебного плана
+class EducationPlanClose(BaseModel):
+    closed_at: datetime
+
+
+# Активация учебного плана
+class EducationPlanActivate(BaseModel):
+    is_active: bool = True
+
+
 # Ответ API
 class EducationPlanResponse(BaseModel):
     id: int # ID плана
