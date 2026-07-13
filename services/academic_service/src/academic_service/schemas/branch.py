@@ -4,6 +4,7 @@ from datetime import datetime
 
 
 from academic_service.schemas.branch_address import (BranchAddressResponse)
+from academic_service.schemas.branch_address import BranchAddressCreate
 
 
 # Базовые поля филиала
@@ -15,6 +16,7 @@ class BranchBase(BaseModel):
 
 # Создание филиала
 class BranchCreate(BranchBase):
+    # address: BranchAddressCreate
     pass
 
 

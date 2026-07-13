@@ -14,21 +14,15 @@ from academic_service.schemas.education_plan_module import (
     EducationPlanModuleReorder
 )
 
-
 router = APIRouter(
     prefix="/education-plan-modules",
     tags=["Education Plan Modules"]
 )
 
 
-
-
 # Получение сервиса
 def get_service() -> EducationPlanModuleService:
     pass
-
-
-
 
 
 # Создать связь план-модуль
@@ -37,10 +31,9 @@ def get_service() -> EducationPlanModuleService:
     response_model=EducationPlanModuleResponse
 )
 async def create_link(
-        data:EducationPlanModuleCreate,
-        service:EducationPlanModuleService = Depends(get_service)
+        data: EducationPlanModuleCreate,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     try:
 
         return await service.add_module(
@@ -57,28 +50,18 @@ async def create_link(
         )
 
 
-
-
-
-
 # Получить все модули конкретного плана
 @router.get(
     "/plan/{plan_id}",
     response_model=list[EducationPlanModuleResponse]
 )
 async def get_plan_modules(
-        plan_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.get_plan_modules(
         plan_id
     )
-
-
-
-
-
 
 
 # Получить количество модулей
@@ -86,10 +69,9 @@ async def get_plan_modules(
     "/plan/{plan_id}/count"
 )
 async def count_modules(
-        plan_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     count = await service.count_modules(
         plan_id
     )
@@ -99,23 +81,16 @@ async def count_modules(
     }
 
 
-
-
-
-
-
-
 # Получить конкретную связь
 @router.get(
     "/plan/{plan_id}/module/{module_id}",
     response_model=EducationPlanModuleResponse
 )
 async def get_link(
-        plan_id:int,
-        module_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     link = await service.repo.get_by_plan_and_module(
         plan_id,
         module_id
@@ -130,22 +105,16 @@ async def get_link(
     return link
 
 
-
-
-
-
-
 # Проверка существования связи
 @router.get(
     "/exists",
     response_model=EducationPlanModuleExistsResponse
 )
 async def exists_link(
-        education_plan_id:int,
-        module_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        education_plan_id: int,
+        module_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     exists = await service.check_exists(
         education_plan_id,
         module_id
@@ -154,7 +123,6 @@ async def exists_link(
     return {
         "exists": exists
     }
-
 
 
 # Получить все связи
@@ -178,24 +146,21 @@ async def get_all_links(
     }
 
 
-
 # Полное обновление связи
 @router.put(
     "/plan/{plan_id}/module/{module_id}",
     response_model=EducationPlanModuleResponse
 )
 async def update_link(
-        plan_id:int,
-        module_id:int,
-        data:EducationPlanModuleUpdate,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        data: EducationPlanModuleUpdate,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     link = await service.repo.get_by_plan_and_module(
         plan_id,
         module_id
     )
-
 
     if not link:
         raise HTTPException(
@@ -203,20 +168,12 @@ async def update_link(
             detail="Link not found"
         )
 
-
     if data.order_number is not None:
         link.order_number = data.order_number
-
 
     return await service.repo.update(
         link
     )
-
-
-
-
-
-
 
 
 # Частичное обновление связи
@@ -225,17 +182,15 @@ async def update_link(
     response_model=EducationPlanModuleResponse
 )
 async def patch_link(
-        plan_id:int,
-        module_id:int,
-        data:EducationPlanModulePatch,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        data: EducationPlanModulePatch,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     link = await service.repo.get_by_plan_and_module(
         plan_id,
         module_id
     )
-
 
     if not link:
         raise HTTPException(
@@ -243,25 +198,15 @@ async def patch_link(
             detail="Link not found"
         )
 
-
     if data.order_number is not None:
         link.order_number = data.order_number
-
 
     if data.is_active is not None:
         link.is_active = data.is_active
 
-
     return await service.repo.update(
         link
     )
-
-
-
-
-
-
-
 
 
 # Изменить порядок одного модуля
@@ -269,12 +214,11 @@ async def patch_link(
     "/plan/{plan_id}/module/{module_id}/order"
 )
 async def update_order(
-        plan_id:int,
-        module_id:int,
-        new_order:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        new_order: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.update_module_order(
         plan_id,
         module_id,
@@ -282,33 +226,19 @@ async def update_order(
     )
 
 
-
-
-
-
-
-
 # Полная перестройка порядка
 @router.patch(
     "/plan/{plan_id}/reorder"
 )
 async def reorder(
-        plan_id:int,
-        data:EducationPlanModuleReorder,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        data: EducationPlanModuleReorder,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.reorder_plan(
         plan_id,
         data
     )
-
-
-
-
-
-
-
 
 
 # Массовое добавление модулей
@@ -316,22 +246,14 @@ async def reorder(
     "/plan/{plan_id}/bulk"
 )
 async def bulk_add(
-        plan_id:int,
-        modules:list[dict],
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        modules: list[dict],
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.bulk_add_modules(
         plan_id,
         modules
     )
-
-
-
-
-
-
-
 
 
 # Полностью заменить список модулей
@@ -339,21 +261,14 @@ async def bulk_add(
     "/plan/{plan_id}/replace"
 )
 async def replace_modules(
-        plan_id:int,
-        modules:list[dict],
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        modules: list[dict],
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.replace_modules(
         plan_id,
         modules
     )
-
-
-
-
-
-
 
 
 # Удалить модуль из плана
@@ -361,21 +276,14 @@ async def replace_modules(
     "/plan/{plan_id}/module/{module_id}"
 )
 async def remove_module(
-        plan_id:int,
-        module_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.remove_module(
         plan_id,
         module_id
     )
-
-
-
-
-
-
 
 
 # Очистить весь план
@@ -383,10 +291,9 @@ async def remove_module(
     "/plan/{plan_id}"
 )
 async def clear_plan(
-        plan_id:int,
-        service:EducationPlanModuleService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanModuleService = Depends(get_service)
 ):
-
     return await service.clear_plan(
         plan_id
     )

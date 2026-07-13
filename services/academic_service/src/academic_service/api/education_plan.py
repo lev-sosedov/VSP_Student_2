@@ -14,19 +14,15 @@ from academic_service.schemas.education_plan import (
     EducationPlanActivate
 )
 
-
 router = APIRouter(
     prefix="/education-plans",
     tags=["Education Plans"]
 )
 
 
-
 # Получение сервиса
 def get_service() -> EducationPlanService:
     pass
-
-
 
 
 # Создание учебного плана
@@ -48,20 +44,16 @@ async def create_plan(
         )
 
 
-
-
-
 # Получить список учебных планов
 @router.get(
     "/",
     response_model=EducationPlanListResponse
 )
 async def get_plans(
-        limit:int = Query(20, ge=1),
-        offset:int = Query(0, ge=0),
-        service:EducationPlanService = Depends(get_service)
+        limit: int = Query(20, ge=1),
+        offset: int = Query(0, ge=0),
+        service: EducationPlanService = Depends(get_service)
 ):
-
     plans = await service.get_all_plans(
         limit,
         offset
@@ -73,20 +65,15 @@ async def get_plans(
     }
 
 
-
-
-
 # Получить активные планы
 @router.get(
     "/active",
     response_model=list[EducationPlanResponse]
 )
 async def get_active_plans(
-        service:EducationPlanService = Depends(get_service)
+        service: EducationPlanService = Depends(get_service)
 ):
     return await service.plan_repo.get_active()
-
-
 
 
 # Получить закрытые планы
@@ -95,11 +82,9 @@ async def get_active_plans(
     response_model=list[EducationPlanResponse]
 )
 async def get_closed_plans(
-        service:EducationPlanService = Depends(get_service)
+        service: EducationPlanService = Depends(get_service)
 ):
     return await service.plan_repo.get_closed()
-
-
 
 
 # Фильтр планов
@@ -108,13 +93,10 @@ async def get_closed_plans(
     response_model=list[EducationPlanResponse]
 )
 async def filter_plans(
-        data:EducationPlanFilter,
-        service:EducationPlanService = Depends(get_service)
+        data: EducationPlanFilter,
+        service: EducationPlanService = Depends(get_service)
 ):
     return await service.plan_repo.filter(data)
-
-
-
 
 
 # Получить по ID
@@ -123,10 +105,9 @@ async def filter_plans(
     response_model=EducationPlanResponse
 )
 async def get_plan(
-        plan_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     try:
         return await service.get_education_plan(plan_id)
 
@@ -137,16 +118,13 @@ async def get_plan(
         )
 
 
-
-
-
 # Получить структуру учебного плана
 @router.get(
     "/{plan_id}/structure"
 )
 async def get_structure(
-        plan_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
     try:
         return await service.get_plan_structure(plan_id)
@@ -158,20 +136,16 @@ async def get_structure(
         )
 
 
-
-
-
 # Полное обновление
 @router.put(
     "/{plan_id}",
     response_model=EducationPlanResponse
 )
 async def update_plan(
-        plan_id:int,
-        data:EducationPlanUpdate,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        data: EducationPlanUpdate,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     try:
         return await service.update_plan(
             plan_id,
@@ -185,20 +159,16 @@ async def update_plan(
         )
 
 
-
-
-
 # Частичное обновление
 @router.patch(
     "/{plan_id}",
     response_model=EducationPlanResponse
 )
 async def patch_plan(
-        plan_id:int,
-        data:EducationPlanPatch,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        data: EducationPlanPatch,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     try:
         return await service.patch_plan(
             plan_id,
@@ -212,20 +182,16 @@ async def patch_plan(
         )
 
 
-
-
-
 # Архивация учебного плана
 @router.patch(
     "/{plan_id}/archive",
     response_model=EducationPlanResponse
 )
 async def close_plan(
-        plan_id:int,
-        data:EducationPlanClose,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        data: EducationPlanClose,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     plan = await service.get_education_plan(plan_id)
 
     plan.is_active = False
@@ -234,20 +200,16 @@ async def close_plan(
     return await service.plan_repo.update(plan)
 
 
-
-
-
 # Активировать план
 @router.patch(
     "/{plan_id}/activate",
     response_model=EducationPlanResponse
 )
 async def activate_plan(
-        plan_id:int,
-        data:EducationPlanActivate,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        data: EducationPlanActivate,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     plan = await service.get_education_plan(plan_id)
 
     plan.is_active = True
@@ -256,19 +218,15 @@ async def activate_plan(
     return await service.plan_repo.update(plan)
 
 
-
-
-
 # Проверка существования
 @router.get(
     "/{plan_id}/exists",
     response_model=EducationPlanExistsResponse
 )
 async def exists_plan(
-        plan_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     plan = await service.plan_repo.get_by_id(plan_id)
 
     return {
@@ -276,21 +234,16 @@ async def exists_plan(
     }
 
 
-
-
-
-
 # Добавить модуль в план
 @router.post(
     "/{plan_id}/modules"
 )
 async def add_module(
-        plan_id:int,
-        module_id:int,
-        order_number:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        order_number: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     try:
         return await service.add_module_to_plan(
             plan_id,
@@ -305,26 +258,19 @@ async def add_module(
         )
 
 
-
-
-
 # Удалить модуль из плана
 @router.delete(
     "/{plan_id}/modules/{module_id}"
 )
 async def remove_module(
-        plan_id:int,
-        module_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        module_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     return await service.remove_module_from_plan(
         plan_id,
         module_id
     )
-
-
-
 
 
 # Изменить порядок модулей
@@ -332,19 +278,14 @@ async def remove_module(
     "/{plan_id}/modules/reorder"
 )
 async def reorder_modules(
-        plan_id:int,
-        modules:list[dict],
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        modules: list[dict],
+        service: EducationPlanService = Depends(get_service)
 ):
-
     return await service.reorder_modules(
         plan_id,
         modules
     )
-
-
-
-
 
 
 # Массовое добавление модулей
@@ -352,18 +293,14 @@ async def reorder_modules(
     "/{plan_id}/modules/bulk"
 )
 async def bulk_modules(
-        plan_id:int,
-        modules:list[dict],
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        modules: list[dict],
+        service: EducationPlanService = Depends(get_service)
 ):
-
     return await service.add_module_to_plan(
         plan_id,
         modules
     )
-
-
-
 
 
 # Удалить все модули плана
@@ -371,16 +308,12 @@ async def bulk_modules(
     "/{plan_id}/modules"
 )
 async def clear_plan(
-        plan_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     return await service.plan_module_repo.delete_by_plan_id(
         plan_id
     )
-
-
-
 
 
 # Безопасное удаление плана
@@ -388,10 +321,9 @@ async def clear_plan(
     "/{plan_id}"
 )
 async def delete_plan(
-        plan_id:int,
-        service:EducationPlanService = Depends(get_service)
+        plan_id: int,
+        service: EducationPlanService = Depends(get_service)
 ):
-
     try:
         return await service.delete_plan(plan_id)
 

@@ -14,7 +14,6 @@ from academic_service.schemas.direction import (
     DirectionDetailResponse
 )
 
-
 router = APIRouter(
     prefix="/directions",
     tags=["Directions"]
@@ -22,7 +21,6 @@ router = APIRouter(
 
 
 def get_service():
-
     repo = DirectionRepository()
     plan_repo = EducationPlanRepository()
 
@@ -30,7 +28,6 @@ def get_service():
         repo,
         plan_repo
     )
-
 
 
 # Создание направления
@@ -45,7 +42,6 @@ async def create_direction(
     return await service.create_direction(data)
 
 
-
 # Получить направление по ID
 @router.get(
     "/{direction_id}",
@@ -56,7 +52,6 @@ async def get_direction(
         service: DirectionService = Depends(get_service)
 ):
     return await service.get_direction_by_id(direction_id)
-
 
 
 # Получить направление с учебными планами
@@ -70,7 +65,6 @@ async def get_direction_with_plans(
     return await service.get_direction_with_plans(direction_id)
 
 
-
 # Получить по названию
 @router.get(
     "/search/name"
@@ -82,7 +76,6 @@ async def get_by_name(
     return await service.get_direction_by_name(name)
 
 
-
 # Поиск направлений
 @router.get(
     "/search"
@@ -92,7 +85,6 @@ async def search_direction(
         service: DirectionService = Depends(get_service)
 ):
     return await service.search(q)
-
 
 
 # Список направлений
@@ -111,7 +103,6 @@ async def get_directions(
     )
 
 
-
 # Только активные направления
 @router.get(
     "/active/list"
@@ -122,7 +113,6 @@ async def get_active(
     return await service.get_active_directions()
 
 
-
 # Только закрытые направления
 @router.get(
     "/closed/list"
@@ -131,7 +121,6 @@ async def get_closed(
         service: DirectionService = Depends(get_service)
 ):
     return await service.get_closed_directions()
-
 
 
 # Обновление направления
@@ -150,7 +139,6 @@ async def update_direction(
     )
 
 
-
 # Частичное обновление
 @router.patch(
     "/{direction_id}",
@@ -167,7 +155,6 @@ async def patch_direction(
     )
 
 
-
 # Закрыть направление
 @router.post(
     "/{direction_id}/close",
@@ -180,7 +167,6 @@ async def close_direction(
     return await service.close_direction(
         direction_id
     )
-
 
 
 # Активировать направление
@@ -197,17 +183,12 @@ async def activate_direction(
     )
 
 
-
 # Проверка существования
-@router.get(
-    "/{direction_id}/exists",
-    response_model=DirectionExistsResponse
-)
+@router.get("/{direction_id}/exists", response_model=DirectionExistsResponse)
 async def exists(
         direction_id: int,
         service: DirectionService = Depends(get_service)
 ):
-
     result = await service.exists(direction_id)
 
     return {
@@ -215,12 +196,8 @@ async def exists(
     }
 
 
-
 # Детальная информация о направлении
-@router.get(
-    "/{direction_id}/detail",
-    response_model=DirectionDetailResponse
-)
+@router.get("/{direction_id}/detail", response_model=DirectionDetailResponse)
 async def get_direction_detail(
         direction_id: int,
         service: DirectionService = Depends(get_service)
@@ -228,7 +205,6 @@ async def get_direction_detail(
     direction = await service.get_by_id(direction_id)
 
     return direction
-
 
 
 # Удаление направления
@@ -242,4 +218,3 @@ async def delete_direction(
     return await service.delete_direction(
         direction_id
     )
-
