@@ -4,31 +4,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from academic_service.db.session import get_session
 
 # repositories
-from academic_service.repositories.group_member_repository import GroupMemberRepository
-from academic_service.repositories.group_repository import GroupRepository
+from academic_service.repositories.repository_group_member import GroupMemberRepository
+from academic_service.repositories.repository_group import GroupRepository
 
-from academic_service.repositories.module_repository import ModuleRepository
-from academic_service.repositories.education_plan_repository import EducationPlanRepository
-from academic_service.repositories.education_plan_module_repository import EducationPlanModuleRepository
+from academic_service.repositories.repository_module import ModuleRepository
+from academic_service.repositories.repository_education_plan import EducationPlanRepository
+from academic_service.repositories.repository_education_plan_module import EducationPlanModuleRepository
 
-from academic_service.repositories.direction_repository import DirectionRepository
+from academic_service.repositories.repository_direction import DirectionRepository
 
-from academic_service.repositories.branch_repository import BranchRepository
-from academic_service.repositories.branch_address_repository import BranchAddressRepository
+from academic_service.repositories.repository_branch import BranchRepository
+from academic_service.repositories.repository_branch_address import BranchAddressRepository
 
-from academic_service.repositories.group_repository import GroupRepository
+from academic_service.repositories.repository_group import GroupRepository
 
 # services
-from academic_service.services.group_member_service import GroupMemberService
-from academic_service.services.module_service import ModuleService
-from academic_service.services.education_plan_service import EducationPlanService
-from academic_service.services.education_plan_module_service import EducationPlanModuleService
-from academic_service.services.direction_service import DirectionService
-from academic_service.services.branch_service import BranchService
-from academic_service.services.branch_address import BranchAddressService
+from academic_service.services.service_group_member import GroupMemberService
+from academic_service.services.service_module import ModuleService
+from academic_service.services.service_education_plan import EducationPlanService
+from academic_service.services.service_education_plan_module import EducationPlanModuleService
+from academic_service.services.service_direction import DirectionService
+from academic_service.services.service_branch import BranchService
+from academic_service.services.service_branch_address import BranchAddressService
 
 
-from academic_service.services.group_service import GroupService
+from academic_service.services.service_group import GroupService
 # =========================
 # Repositories
 # =========================
@@ -132,7 +132,18 @@ def get_branch_address_service(
         BranchAddressRepository(session)
     )
 
-def get_group_service(session: AsyncSession = Depends(get_session)):
+# def get_group_service(session: AsyncSession = Depends(get_session)):
+#     return GroupService(
+#         repo=GroupRepository(session)
+#     )
+
+def get_group_service(
+        session: AsyncSession = Depends(get_session)
+):
+
     return GroupService(
-        repo=GroupRepository(session)
+        GroupRepository(session),
+        BranchRepository(session),
+        DirectionRepository(session),
+        EducationPlanRepository(session)
     )

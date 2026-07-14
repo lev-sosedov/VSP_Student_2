@@ -5,14 +5,14 @@ from fastapi import FastAPI
 from academic_service.db.base import Base
 from academic_service.db.session import engine
 
-from academic_service.api.module import router as module_router
-from academic_service.api.education_plan import router as education_plan_router
-from academic_service.api.education_plan_module import router as education_plan_module_router
-from academic_service.api.direction import router as direction_router
-from academic_service.api.group import router as group_router
-from academic_service.api.group_member import router as group_member_router
-from academic_service.api.branch import router as branch_router
-from academic_service.api.branch_address import router as branch_address_router
+from academic_service.api.api_module import router as module_router
+from academic_service.api.api_education_plan import router as education_plan_router
+from academic_service.api.api_education_plan_module import router as education_plan_module_router
+from academic_service.api.api_direction import router as direction_router
+from academic_service.api.api_group import router as group_router
+from academic_service.api.api_group_member import router as group_member_router
+from academic_service.api.api_branch import router as branch_router
+from academic_service.api.api_branch_address import router as branch_address_router
 from academic_service.db import init_models
 from academic_service.events.consumer import academic_consumer
 from academic_service.messaging.rabbit import RabbitConnection
