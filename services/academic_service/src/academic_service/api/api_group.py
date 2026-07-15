@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Query,HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 
+from academic_service.core.core_dependencies import get_group_service
 from academic_service.services.service_group import GroupService
 from academic_service.schemas.schemas_group import (
     GroupCreate,
@@ -11,12 +12,7 @@ from academic_service.schemas.schemas_group import (
     GroupExistsResponse
 )
 
-from academic_service.core.dependencies import get_group_service
-
-router = APIRouter(
-    prefix="/groups",
-    tags=["Groups"]
-)
+router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
 # =========================
@@ -276,6 +272,8 @@ async def safe_delete_group(
         service: GroupService = Depends(get_group_service)
 ):
     return await service.safe_delete_group(group_id)
+
+
 # ----------------------------------------------------------
 # =========================
 # Детальная информация о группе
@@ -298,8 +296,8 @@ async def safe_delete_group(
     },
 )
 async def get_group_detail(
-    group_id: int,
-    service: GroupService = Depends(get_group_service),
+        group_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     try:
         return await service.get_group_details(group_id)
@@ -331,7 +329,7 @@ async def get_group_detail(
     response_description="Список активных групп",
 )
 async def get_active_groups(
-    service: GroupService = Depends(get_group_service),
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.get_active_groups()
 
@@ -350,7 +348,7 @@ async def get_active_groups(
     response_description="Список закрытых групп",
 )
 async def get_closed_groups(
-    service: GroupService = Depends(get_group_service),
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.get_closed_groups()
 
@@ -374,8 +372,8 @@ async def get_closed_groups(
     },
 )
 async def close_group(
-    group_id: int,
-    service: GroupService = Depends(get_group_service),
+        group_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     try:
         return await service.close_group(group_id)
@@ -404,8 +402,8 @@ async def close_group(
     },
 )
 async def restore_group(
-    group_id: int,
-    service: GroupService = Depends(get_group_service),
+        group_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     try:
         return await service.restore_group(group_id)
@@ -431,8 +429,8 @@ async def restore_group(
     response_description="Результат проверки",
 )
 async def exists_group(
-    group_id: int,
-    service: GroupService = Depends(get_group_service),
+        group_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     result = await service.exists(group_id)
 
@@ -455,8 +453,8 @@ async def exists_group(
     response_description="Найденные группы",
 )
 async def search_groups(
-    name: str,
-    service: GroupService = Depends(get_group_service),
+        name: str,
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.search(name)
 
@@ -475,8 +473,8 @@ async def search_groups(
     response_description="Список групп филиала",
 )
 async def get_groups_by_branch(
-    branch_id: int,
-    service: GroupService = Depends(get_group_service),
+        branch_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.get_by_branch(branch_id)
 
@@ -495,8 +493,8 @@ async def get_groups_by_branch(
     response_description="Список групп направления",
 )
 async def get_groups_by_direction(
-    direction_id: int,
-    service: GroupService = Depends(get_group_service),
+        direction_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.get_by_direction(direction_id)
 
@@ -515,7 +513,7 @@ async def get_groups_by_direction(
     response_description="Список групп учебного плана",
 )
 async def get_groups_by_plan(
-    plan_id: int,
-    service: GroupService = Depends(get_group_service),
+        plan_id: int,
+        service: GroupService = Depends(get_group_service),
 ):
     return await service.get_by_plan(plan_id)

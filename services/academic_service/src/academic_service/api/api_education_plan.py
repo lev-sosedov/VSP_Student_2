@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from academic_service.db.session import get_session
+from academic_service.db.db_session import get_session
 from academic_service.services.service_education_plan import EducationPlanService
 
 from academic_service.repositories.repository_education_plan import EducationPlanRepository

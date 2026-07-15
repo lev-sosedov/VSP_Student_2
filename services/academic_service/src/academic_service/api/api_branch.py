@@ -15,7 +15,7 @@ from academic_service.schemas.schemas_branch import (
 )
 
 from academic_service.schemas.schemas_branch_address import BranchAddressUpdate
-from academic_service.db.session import get_session
+from academic_service.db.db_session import get_session
 
 router = APIRouter(prefix="/branches", tags=["Branches"])
 

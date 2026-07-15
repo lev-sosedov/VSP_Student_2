@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from academic_service.models.models_education_plans import EducationPlan
+from academic_service.models.models_education_plan import EducationPlan
 from academic_service.repositories.repository_education_plan import EducationPlanRepository
 from academic_service.repositories.repository_direction import DirectionRepository
 from academic_service.repositories.repository_education_plan_module import EducationPlanModuleRepository

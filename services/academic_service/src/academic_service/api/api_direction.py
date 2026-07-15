@@ -15,7 +15,7 @@ from academic_service.schemas.schemas_direction import (
     DirectionDetailResponse
 )
 
-from academic_service.db.session import get_session
+from academic_service.db.db_session import get_session
 
 router = APIRouter(
     prefix="/directions",

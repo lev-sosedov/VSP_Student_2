@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_
 
-from academic_service.models.module import Module
+from academic_service.models.models_module import Module
 
 
 class ModuleRepository:

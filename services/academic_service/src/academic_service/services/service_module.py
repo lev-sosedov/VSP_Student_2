@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from academic_service.models.module import Module
+from academic_service.models.models_module import Module
 from academic_service.repositories.repository_module import ModuleRepository
 from academic_service.schemas.schemas_module import (
     ModuleCreate,

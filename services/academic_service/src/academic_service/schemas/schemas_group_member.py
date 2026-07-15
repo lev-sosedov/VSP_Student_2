@@ -83,9 +83,3 @@ class GroupMemberTransfer(BaseModel):
     old_group_id: int
     new_group_id: int
     user_id: int
-
-
-# Массовое добавление
-class GroupMemberBulkCreate(BaseModel):
-    group_id: int
-    members: list[GroupMemberCreate]

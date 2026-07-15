@@ -7,7 +7,7 @@ from fastapi import (
     status
 )
 
-from academic_service.db.session import get_session
+from academic_service.db.db_session import get_session
 from academic_service.repositories.repository_module import ModuleRepository
 from academic_service.services.service_module import ModuleService
 from academic_service.schemas.schemas_module import (

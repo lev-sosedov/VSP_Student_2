@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
-from academic_service.db.base import Base
+from academic_service.db.db_base import Base
 
 
 # Адрес филиала

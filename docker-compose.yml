@@ -76,6 +76,31 @@ services:
       redis:
         condition: service_healthy
 
+  schedule-service:
+    build:
+      context: .
+      dockerfile: services/schedule_service/Dockerfile
+
+    container_name: schedule-service
+
+    restart: unless-stopped
+
+    env_file:
+      - ./services/schedule_service/.env
+
+    ports:
+      - "8003:8003"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
 
   postgres:
     image: postgres:16
