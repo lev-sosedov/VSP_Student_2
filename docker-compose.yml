@@ -102,6 +102,108 @@ services:
         condition: service_healthy
 
 
+  content-service:
+    build:
+      context: .
+      dockerfile: services/content_service/Dockerfile
+
+    container_name: content-service
+
+    restart: unless-stopped
+
+    env_file:
+      - ./services/content_service/.env
+
+    ports:
+      - "8004:8004"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification_service/Dockerfile
+
+    container_name: notification-service
+
+    restart: unless-stopped
+
+    env_file:
+      - ./services/notification_service/.env
+
+    ports:
+      - "8005:8005"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+
+  communication-service:
+    build:
+      context: .
+      dockerfile: services/communication_service/Dockerfile
+
+    container_name: communication-service
+
+    restart: unless-stopped
+
+    env_file:
+      - ./services/communication_service/.env
+
+    ports:
+      - "8006:8006"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+
+  news-service:
+    build:
+      context: .
+      dockerfile: services/news_service/Dockerfile
+
+    container_name: news-service
+
+    env_file:
+      - services/news_service/.env
+
+    ports:
+      - "8007:8007"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      rabbitmq:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+
   postgres:
     image: postgres:16
 

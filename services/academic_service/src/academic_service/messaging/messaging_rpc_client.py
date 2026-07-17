@@ -63,7 +63,10 @@ class RabbitRpcClient:
             reply_to=self.callback_queue.name,
             content_type="application/json")
 
-        await self.channel.default_exchange.publish(message, routing_key=rabbitmq_settings.rpc_queue)
+        await self.channel.default_exchange.publish(
+            message,
+            routing_key=rabbitmq_settings.user_rpc_queue
+        )
 
         try:
             return await asyncio.wait_for(future, timeout=timeout)
@@ -72,6 +75,22 @@ class RabbitRpcClient:
             self.futures.pop(correlation_id, None)
 
             raise ValueError("User Service did not respond")
+
+    async def stop(self):
+        for future in self.futures.values():
+            if not future.done():
+                future.cancel()
+
+        self.futures.clear()
+
+        self.channel = None
+        self.callback_queue = None
+        self.started = False
+
+        print(
+            "[Academic RPC] Client stopped",
+            flush=True
+        )
 
 
 rabbit_rpc_client = RabbitRpcClient()

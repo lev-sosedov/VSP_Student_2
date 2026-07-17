@@ -14,6 +14,9 @@ from schedule_service.schemas.schemas_room import (
     RoomResponse,
     RoomUpdate
 )
+from schedule_service.services.service_external_validation import (
+    validate_branch
+)
 from schedule_service.services.service_room import (
     create_room,
     get_room_by_id,
@@ -44,6 +47,19 @@ async def create_room_endpoint(
     room_data: RoomCreate,
     session: AsyncSession = Depends(get_session)
 ):
+    # Проверяем филиал через academic-service
+    try:
+        await validate_branch(
+            branch_id=room_data.branch_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error)
+        ) from error
+
+    # Проверяем дубликат кабинета в филиале
     existing_room = await get_room_by_name_and_branch(
         session=session,
         branch_id=room_data.branch_id,
@@ -163,11 +179,25 @@ async def update_room_endpoint(
             detail="Кабинет не найден"
         )
 
+    # Определяем итоговый филиал
     new_branch_id = (
         room_data.branch_id
         if room_data.branch_id is not None
         else room.branch_id
     )
+
+    # Если филиал меняется или указан повторно,
+    # проверяем его через academic-service
+    try:
+        await validate_branch(
+            branch_id=new_branch_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error)
+        ) from error
 
     new_name = (
         room_data.name
@@ -268,6 +298,22 @@ async def activate_room_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail="Кабинет уже активен"
         )
+
+    # Перед повторной активацией проверяем,
+    # что филиал всё ещё существует и активен
+    try:
+        await validate_branch(
+            branch_id=room.branch_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Нельзя активировать кабинет: "
+                f"{str(error)}"
+            )
+        ) from error
 
     return await set_room_activity(
         session=session,

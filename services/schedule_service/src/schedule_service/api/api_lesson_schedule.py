@@ -23,6 +23,10 @@ from schedule_service.schemas.schemas_lesson_schedule import (
     LessonScheduleResponse,
     LessonScheduleUpdate
 )
+from schedule_service.services.service_external_validation import (
+    validate_group_and_teacher,
+    validate_room_branch
+)
 from schedule_service.services.service_lesson_schedule import (
     create_lesson,
     create_schedule_change,
@@ -36,6 +40,9 @@ from schedule_service.services.service_lesson_schedule import (
     set_lesson_status,
     update_lesson
 )
+from schedule_service.services.service_room import (
+    get_room_by_id
+)
 
 
 router = APIRouter(
@@ -45,7 +52,7 @@ router = APIRouter(
 
 
 # =====================================================
-# Текст ошибки конфликта
+# Сообщение о конфликте занятия
 # =====================================================
 
 def get_lesson_conflict_message(
@@ -54,7 +61,7 @@ def get_lesson_conflict_message(
     teacher_id: int,
     room_id: int
 ) -> str:
-    conflict_reasons = []
+    conflict_reasons: list[str] = []
 
     if conflict.group_id == group_id:
         conflict_reasons.append(
@@ -80,7 +87,120 @@ def get_lesson_conflict_message(
 
 
 # =====================================================
-# Создание занятия
+# Проверка группы, преподавателя и кабинета
+# =====================================================
+
+async def validate_lesson_relations(
+    session: AsyncSession,
+    group_id: int,
+    teacher_id: int,
+    room_id: int
+) -> None:
+    # Проверяем группу через academic-service
+    # и преподавателя через user-service
+    try:
+        group, _teacher = await validate_group_and_teacher(
+            group_id=group_id,
+            teacher_id=teacher_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error)
+        ) from error
+
+    # Проверяем кабинет внутри schedule-service
+    room = await get_room_by_id(
+        session=session,
+        room_id=room_id
+    )
+
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Кабинет не найден"
+        )
+
+    if not room.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Кабинет неактивен"
+        )
+
+    # Кабинет и группа должны находиться
+    # в одном филиале
+    try:
+        validate_room_branch(
+            room_branch_id=room.branch_id,
+            group=group
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error)
+        ) from error
+
+
+# =====================================================
+# Проверка недельного шаблона занятия
+# =====================================================
+
+async def validate_lesson_template(
+    session: AsyncSession,
+    template_id: int | None,
+    group_id: int,
+    teacher_id: int,
+    room_id: int
+) -> None:
+    if template_id is None:
+        return
+
+    template = await get_active_template(
+        session=session,
+        template_id=template_id
+    )
+
+    if template is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Активный шаблон расписания "
+                "не найден"
+            )
+        )
+
+    if template.group_id != group_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Группа занятия не соответствует "
+                "группе недельного шаблона"
+            )
+        )
+
+    if template.teacher_id != teacher_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Преподаватель занятия не соответствует "
+                "преподавателю недельного шаблона"
+            )
+        )
+
+    if template.room_id != room_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Кабинет занятия не соответствует "
+                "кабинету недельного шаблона"
+            )
+        )
+
+
+# =====================================================
+# Создание конкретного занятия
 # =====================================================
 
 @router.post(
@@ -93,38 +213,25 @@ async def create_lesson_endpoint(
     lesson_data: LessonScheduleCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    room = await get_active_room(
+    # Проверяем группу, преподавателя и кабинет
+    await validate_lesson_relations(
         session=session,
+        group_id=lesson_data.group_id,
+        teacher_id=lesson_data.teacher_id,
         room_id=lesson_data.room_id
     )
 
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активный кабинет не найден"
-        )
+    # Если занятие связано с недельным шаблоном,
+    # проверяем соответствие данных
+    await validate_lesson_template(
+        session=session,
+        template_id=lesson_data.template_id,
+        group_id=lesson_data.group_id,
+        teacher_id=lesson_data.teacher_id,
+        room_id=lesson_data.room_id
+    )
 
-    if lesson_data.template_id is not None:
-        template = await get_active_template(
-            session=session,
-            template_id=lesson_data.template_id
-        )
-
-        if template is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Активный шаблон расписания не найден"
-            )
-
-        if template.group_id != lesson_data.group_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Указанная группа не соответствует "
-                    "группе шаблона расписания"
-                )
-            )
-
+    # Проверяем конфликты расписания
     conflict = await find_lesson_conflict(
         session=session,
         group_id=lesson_data.group_id,
@@ -206,7 +313,8 @@ async def get_lessons_endpoint(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
-                "Конечная дата не может быть раньше начальной"
+                "Конечная дата не может быть "
+                "раньше начальной"
             )
         )
 
@@ -231,7 +339,7 @@ async def get_lessons_endpoint(
 
 # =====================================================
 # Получение занятий группы
-# Важно: маршрут расположен до /{lesson_id}
+# Этот маршрут должен находиться раньше /{lesson_id}
 # =====================================================
 
 @router.get(
@@ -249,6 +357,19 @@ async def get_group_lessons_endpoint(
     ),
     session: AsyncSession = Depends(get_session)
 ):
+    if (
+        lesson_date_from is not None
+        and lesson_date_to is not None
+        and lesson_date_to < lesson_date_from
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Конечная дата не может быть "
+                "раньше начальной"
+            )
+        )
+
     lessons, total = await get_lessons(
         session=session,
         group_id=group_id,
@@ -283,6 +404,19 @@ async def get_teacher_lessons_endpoint(
     ),
     session: AsyncSession = Depends(get_session)
 ):
+    if (
+        lesson_date_from is not None
+        and lesson_date_to is not None
+        and lesson_date_to < lesson_date_from
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Конечная дата не может быть "
+                "раньше начальной"
+            )
+        )
+
     lessons, total = await get_lessons(
         session=session,
         teacher_id=teacher_id,
@@ -362,6 +496,7 @@ async def update_lesson_endpoint(
             )
         )
 
+    # Получаем итоговые значения после PATCH
     new_group_id = (
         lesson_data.group_id
         if lesson_data.group_id is not None
@@ -378,6 +513,12 @@ async def update_lesson_endpoint(
         lesson_data.room_id
         if lesson_data.room_id is not None
         else lesson.room_id
+    )
+
+    new_template_id = (
+        lesson_data.template_id
+        if lesson_data.template_id is not None
+        else lesson.template_id
     )
 
     new_lesson_date = (
@@ -407,29 +548,24 @@ async def update_lesson_endpoint(
             )
         )
 
-    room = await get_active_room(
+    # Проверяем итоговые группу, преподавателя и кабинет
+    await validate_lesson_relations(
         session=session,
+        group_id=new_group_id,
+        teacher_id=new_teacher_id,
         room_id=new_room_id
     )
 
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активный кабинет не найден"
-        )
+    # Проверяем соответствие недельному шаблону
+    await validate_lesson_template(
+        session=session,
+        template_id=new_template_id,
+        group_id=new_group_id,
+        teacher_id=new_teacher_id,
+        room_id=new_room_id
+    )
 
-    if lesson_data.template_id is not None:
-        template = await get_active_template(
-            session=session,
-            template_id=lesson_data.template_id
-        )
-
-        if template is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Активный шаблон расписания не найден"
-            )
-
+    # Проверяем пересечения
     conflict = await find_lesson_conflict(
         session=session,
         group_id=new_group_id,
@@ -452,7 +588,10 @@ async def update_lesson_endpoint(
             )
         )
 
-    old_data = lesson_to_dict(lesson)
+    # Сохраняем состояние до изменения
+    old_data = lesson_to_dict(
+        lesson
+    )
 
     updated_lesson = await update_lesson(
         session=session,
@@ -460,7 +599,10 @@ async def update_lesson_endpoint(
         lesson_data=lesson_data
     )
 
-    new_data = lesson_to_dict(updated_lesson)
+    # Сохраняем состояние после изменения
+    new_data = lesson_to_dict(
+        updated_lesson
+    )
 
     await create_schedule_change(
         session=session,
@@ -509,10 +651,14 @@ async def cancel_lesson_endpoint(
     if lesson.status == LessonStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Нельзя отменить завершённое занятие"
+            detail=(
+                "Нельзя отменить завершённое занятие"
+            )
         )
 
-    old_data = lesson_to_dict(lesson)
+    old_data = lesson_to_dict(
+        lesson
+    )
 
     updated_lesson = await set_lesson_status(
         session=session,
@@ -520,7 +666,9 @@ async def cancel_lesson_endpoint(
         lesson_status=LessonStatus.CANCELLED
     )
 
-    new_data = lesson_to_dict(updated_lesson)
+    new_data = lesson_to_dict(
+        updated_lesson
+    )
 
     await create_schedule_change(
         session=session,
@@ -569,10 +717,14 @@ async def complete_lesson_endpoint(
     if lesson.status == LessonStatus.CANCELLED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Нельзя завершить отменённое занятие"
+            detail=(
+                "Нельзя завершить отменённое занятие"
+            )
         )
 
-    old_data = lesson_to_dict(lesson)
+    old_data = lesson_to_dict(
+        lesson
+    )
 
     updated_lesson = await set_lesson_status(
         session=session,
@@ -580,7 +732,9 @@ async def complete_lesson_endpoint(
         lesson_status=LessonStatus.COMPLETED
     )
 
-    new_data = lesson_to_dict(updated_lesson)
+    new_data = lesson_to_dict(
+        updated_lesson
+    )
 
     await create_schedule_change(
         session=session,
@@ -624,13 +778,17 @@ async def reschedule_lesson_endpoint(
     if lesson.status == LessonStatus.CANCELLED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Нельзя перенести отменённое занятие"
+            detail=(
+                "Нельзя перенести отменённое занятие"
+            )
         )
 
     if lesson.status == LessonStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Нельзя перенести завершённое занятие"
+            detail=(
+                "Нельзя перенести завершённое занятие"
+            )
         )
 
     new_room_id = (
@@ -645,16 +803,17 @@ async def reschedule_lesson_endpoint(
         else lesson.teacher_id
     )
 
-    room = await get_active_room(
+    # Проверяем преподавателя, группу и кабинет
+    await validate_lesson_relations(
         session=session,
+        group_id=lesson.group_id,
+        teacher_id=new_teacher_id,
         room_id=new_room_id
     )
 
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активный кабинет не найден"
-        )
+    # При переносе допускается заменить преподавателя
+    # или кабинет, поэтому соответствие старому шаблону
+    # здесь намеренно не проверяется.
 
     conflict = await find_lesson_conflict(
         session=session,
@@ -678,7 +837,9 @@ async def reschedule_lesson_endpoint(
             )
         )
 
-    old_data = lesson_to_dict(lesson)
+    old_data = lesson_to_dict(
+        lesson
+    )
 
     updated_lesson = await reschedule_lesson(
         session=session,
@@ -686,7 +847,9 @@ async def reschedule_lesson_endpoint(
         reschedule_data=reschedule_data
     )
 
-    new_data = lesson_to_dict(updated_lesson)
+    new_data = lesson_to_dict(
+        updated_lesson
+    )
 
     await create_schedule_change(
         session=session,

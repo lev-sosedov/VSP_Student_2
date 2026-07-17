@@ -32,6 +32,20 @@ from schedule_service.services.service_schedule_change import (
     get_schedule_change_by_id,
     get_schedule_changes
 )
+from schedule_service.services.service_lesson_generation import (
+    generate_lessons_from_template,
+    get_generated_lesson,
+    get_template_dates
+)
+from schedule_service.services.service_external_validation import (
+    validate_branch,
+    validate_group,
+    validate_group_and_teacher,
+    validate_room_branch,
+    validate_rpc_response,
+    validate_teacher,
+    validate_user
+)
 
 
 __all__ = [
@@ -61,4 +75,14 @@ __all__ = [
     "update_lesson",
     "get_schedule_change_by_id",
     "get_schedule_changes",
+    "get_template_dates",
+    "get_generated_lesson",
+    "generate_lessons_from_template",
+    "validate_rpc_response",
+    "validate_branch",
+    "validate_group",
+    "validate_user",
+    "validate_teacher",
+    "validate_group_and_teacher",
+    "validate_room_branch",
 ]

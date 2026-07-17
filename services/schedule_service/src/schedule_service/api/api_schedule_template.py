@@ -17,6 +17,13 @@ from schedule_service.schemas.schemas_schedule_template import (
     ScheduleTemplateResponse,
     ScheduleTemplateUpdate
 )
+from schedule_service.services.service_external_validation import (
+    validate_group_and_teacher,
+    validate_room_branch
+)
+from schedule_service.services.service_room import (
+    get_room_by_id
+)
 from schedule_service.services.service_schedule_template import (
     create_schedule_template,
     find_schedule_conflict,
@@ -44,16 +51,22 @@ def get_conflict_message(
     teacher_id: int,
     room_id: int
 ) -> str:
-    conflict_reasons = []
+    conflict_reasons: list[str] = []
 
     if conflict.group_id == group_id:
-        conflict_reasons.append("группа уже занята")
+        conflict_reasons.append(
+            "группа уже занята"
+        )
 
     if conflict.teacher_id == teacher_id:
-        conflict_reasons.append("преподаватель уже занят")
+        conflict_reasons.append(
+            "преподаватель уже занят"
+        )
 
     if conflict.room_id == room_id:
-        conflict_reasons.append("кабинет уже занят")
+        conflict_reasons.append(
+            "кабинет уже занят"
+        )
 
     reasons = ", ".join(conflict_reasons)
 
@@ -61,6 +74,62 @@ def get_conflict_message(
         f"Обнаружен конфликт расписания: {reasons}. "
         f"Конфликтующий шаблон имеет ID {conflict.id}"
     )
+
+
+# =====================================================
+# Проверка группы, преподавателя и кабинета
+# =====================================================
+
+async def validate_template_relations(
+    session: AsyncSession,
+    group_id: int,
+    teacher_id: int,
+    room_id: int
+) -> None:
+    # Проверяем группу и преподавателя через RPC
+    try:
+        group, _teacher = await validate_group_and_teacher(
+            group_id=group_id,
+            teacher_id=teacher_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error)
+        ) from error
+
+    # Получаем кабинет из schedule-service
+    room = await get_room_by_id(
+        session=session,
+        room_id=room_id
+    )
+
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Кабинет не найден"
+        )
+
+    if not room.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Кабинет неактивен"
+        )
+
+    # Проверяем, что кабинет находится
+    # в том же филиале, что и группа
+    try:
+        validate_room_branch(
+            room_branch_id=room.branch_id,
+            group=group
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error)
+        ) from error
 
 
 # =====================================================
@@ -77,16 +146,12 @@ async def create_schedule_template_endpoint(
     template_data: ScheduleTemplateCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    room = await get_active_room_by_id(
+    await validate_template_relations(
         session=session,
+        group_id=template_data.group_id,
+        teacher_id=template_data.teacher_id,
         room_id=template_data.room_id
     )
-
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активный кабинет не найден"
-        )
 
     conflict = await find_schedule_conflict(
         session=session,
@@ -293,33 +358,31 @@ async def update_schedule_template_endpoint(
         else template.end_time
     )
 
-    if new_end_time <= new_start_time:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "Время окончания должно быть позже "
-                "времени начала"
-            )
-        )
-
-    room = await get_active_room_by_id(
-        session=session,
-        room_id=new_room_id
-    )
-
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активный кабинет не найден"
-        )
-
     new_is_active = (
         template_data.is_active
         if template_data.is_active is not None
         else template.is_active
     )
 
+    if new_end_time <= new_start_time:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "Время окончания должно быть позже "
+                "времени начала"
+            )
+        )
+
+    # Проверяем связи только если итоговый шаблон активен.
+    # Неактивный шаблон может временно хранить старые данные.
     if new_is_active:
+        await validate_template_relations(
+            session=session,
+            group_id=new_group_id,
+            teacher_id=new_teacher_id,
+            room_id=new_room_id
+        )
+
         conflict = await find_schedule_conflict(
             session=session,
             group_id=new_group_id,
@@ -418,19 +481,12 @@ async def activate_schedule_template_endpoint(
             detail="Шаблон уже активен"
         )
 
-    room = await get_active_room_by_id(
+    await validate_template_relations(
         session=session,
+        group_id=template.group_id,
+        teacher_id=template.teacher_id,
         room_id=template.room_id
     )
-
-    if room is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Нельзя активировать шаблон: "
-                "кабинет неактивен или не существует"
-            )
-        )
 
     conflict = await find_schedule_conflict(
         session=session,

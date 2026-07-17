@@ -19,6 +19,9 @@ from schedule_service.schemas.schemas_lesson_schedule import (
     LessonScheduleCreate,
     LessonScheduleUpdate
 )
+from schedule_service.messaging.messaging_event_publisher import (
+    schedule_event_publisher
+)
 
 
 # =====================================================
@@ -234,6 +237,26 @@ async def create_lesson(
     await session.flush()
     await session.refresh(lesson)
 
+    await schedule_event_publisher.publish(
+        routing_key="schedule.lesson.created",
+        payload={
+            "lesson_id": lesson.id,
+            "group_id": lesson.group_id,
+            "teacher_id": lesson.teacher_id,
+            "room_id": lesson.room_id,
+            "template_id": lesson.template_id,
+            "lesson_date": lesson.lesson_date,
+            "start_time": lesson.start_time,
+            "end_time": lesson.end_time,
+            "status": lesson.status,
+            "lesson_type": lesson.lesson_type,
+            "topic": lesson.topic,
+            "description": lesson.description,
+            "is_extra": lesson.is_extra,
+            "created_by": lesson.created_by
+        }
+    )
+
     return lesson
 
 
@@ -329,6 +352,10 @@ async def update_lesson(
     lesson: LessonSchedule,
     lesson_data: LessonScheduleUpdate
 ) -> LessonSchedule:
+    old_data = lesson_to_dict(
+        lesson=lesson
+    )
+
     update_data = lesson_data.model_dump(
         exclude_unset=True,
         exclude={
@@ -347,6 +374,76 @@ async def update_lesson(
     await session.flush()
     await session.refresh(lesson)
 
+    new_data = lesson_to_dict(
+        lesson=lesson
+    )
+
+    changed_by = lesson_data.changed_by
+
+    # Замена преподавателя
+    if (
+        old_data["teacher_id"]
+        != new_data["teacher_id"]
+    ):
+        await schedule_event_publisher.publish(
+            routing_key=(
+                "schedule.lesson.teacher_changed"
+            ),
+            payload={
+                "lesson_id": lesson.id,
+                "group_id": lesson.group_id,
+                "old_teacher_id": (
+                    old_data["teacher_id"]
+                ),
+                "new_teacher_id": (
+                    new_data["teacher_id"]
+                ),
+                "lesson_date": lesson.lesson_date,
+                "start_time": lesson.start_time,
+                "end_time": lesson.end_time,
+                "changed_by": changed_by,
+                "reason": lesson_data.reason
+            }
+        )
+
+    # Замена кабинета
+    if old_data["room_id"] != new_data["room_id"]:
+        await schedule_event_publisher.publish(
+            routing_key=(
+                "schedule.lesson.room_changed"
+            ),
+            payload={
+                "lesson_id": lesson.id,
+                "group_id": lesson.group_id,
+                "teacher_id": lesson.teacher_id,
+                "old_room_id": old_data["room_id"],
+                "new_room_id": new_data["room_id"],
+                "lesson_date": lesson.lesson_date,
+                "start_time": lesson.start_time,
+                "end_time": lesson.end_time,
+                "changed_by": changed_by,
+                "reason": lesson_data.reason
+            }
+        )
+
+    await schedule_event_publisher.publish(
+        routing_key="schedule.lesson.updated",
+        payload={
+            "lesson_id": lesson.id,
+            "group_id": lesson.group_id,
+            "teacher_id": lesson.teacher_id,
+            "room_id": lesson.room_id,
+            "lesson_date": lesson.lesson_date,
+            "start_time": lesson.start_time,
+            "end_time": lesson.end_time,
+            "status": lesson.status,
+            "old_data": old_data,
+            "new_data": new_data,
+            "changed_by": changed_by,
+            "reason": lesson_data.reason
+        }
+    )
+
     return lesson
 
 
@@ -359,10 +456,45 @@ async def set_lesson_status(
     lesson: LessonSchedule,
     lesson_status: LessonStatus
 ) -> LessonSchedule:
+    old_status = lesson.status
+
     lesson.status = lesson_status
 
     await session.flush()
     await session.refresh(lesson)
+
+    routing_keys = {
+        LessonStatus.CANCELLED: (
+            "schedule.lesson.cancelled"
+        ),
+        LessonStatus.COMPLETED: (
+            "schedule.lesson.completed"
+        ),
+        LessonStatus.SCHEDULED: (
+            "schedule.lesson.restored"
+        )
+    }
+
+    routing_key = routing_keys.get(
+        lesson_status,
+        "schedule.lesson.status_changed"
+    )
+
+    await schedule_event_publisher.publish(
+        routing_key=routing_key,
+        payload={
+            "lesson_id": lesson.id,
+            "group_id": lesson.group_id,
+            "teacher_id": lesson.teacher_id,
+            "room_id": lesson.room_id,
+            "lesson_date": lesson.lesson_date,
+            "start_time": lesson.start_time,
+            "end_time": lesson.end_time,
+            "old_status": old_status,
+            "new_status": lesson.status,
+            "is_extra": lesson.is_extra
+        }
+    )
 
     return lesson
 
@@ -376,19 +508,78 @@ async def reschedule_lesson(
     lesson: LessonSchedule,
     reschedule_data: LessonRescheduleRequest
 ) -> LessonSchedule:
-    lesson.lesson_date = reschedule_data.lesson_date
-    lesson.start_time = reschedule_data.start_time
-    lesson.end_time = reschedule_data.end_time
+    old_data = lesson_to_dict(
+        lesson=lesson
+    )
+
+    old_teacher_id = lesson.teacher_id
+    old_room_id = lesson.room_id
+
+    lesson.lesson_date = (
+        reschedule_data.lesson_date
+    )
+    lesson.start_time = (
+        reschedule_data.start_time
+    )
+    lesson.end_time = (
+        reschedule_data.end_time
+    )
 
     if reschedule_data.room_id is not None:
         lesson.room_id = reschedule_data.room_id
 
     if reschedule_data.teacher_id is not None:
-        lesson.teacher_id = reschedule_data.teacher_id
+        lesson.teacher_id = (
+            reschedule_data.teacher_id
+        )
 
     lesson.status = LessonStatus.RESCHEDULED
 
     await session.flush()
     await session.refresh(lesson)
+
+    new_data = lesson_to_dict(
+        lesson=lesson
+    )
+
+    await schedule_event_publisher.publish(
+        routing_key="schedule.lesson.rescheduled",
+        payload={
+            "lesson_id": lesson.id,
+            "group_id": lesson.group_id,
+
+            "old_teacher_id": old_teacher_id,
+            "new_teacher_id": lesson.teacher_id,
+
+            "old_room_id": old_room_id,
+            "new_room_id": lesson.room_id,
+
+            "old_lesson_date": (
+                old_data["lesson_date"]
+            ),
+            "new_lesson_date": (
+                new_data["lesson_date"]
+            ),
+
+            "old_start_time": (
+                old_data["start_time"]
+            ),
+            "new_start_time": (
+                new_data["start_time"]
+            ),
+
+            "old_end_time": (
+                old_data["end_time"]
+            ),
+            "new_end_time": (
+                new_data["end_time"]
+            ),
+
+            "changed_by": (
+                reschedule_data.changed_by
+            ),
+            "reason": reschedule_data.reason
+        }
+    )
 
     return lesson

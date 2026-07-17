@@ -1,4 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    SettingsConfigDict
+)
 
 
 class RabbitMQSettings(BaseSettings):
@@ -16,7 +19,13 @@ class RabbitMQSettings(BaseSettings):
     queue: str = "academic_service"
     routing_key: str = "academic.#"
 
-    rpc_queue: str = "user_service.rpc"
+    # Очередь, которую слушает RPC-сервер
+    # academic-service
+    academic_rpc_queue: str = "academic_service.rpc"
+
+    # Очередь, куда academic-service отправляет
+    # RPC-запросы в user-service
+    user_rpc_queue: str = "user_service.rpc"
 
     prefetch_count: int = 10
     reconnect_interval: int = 5
@@ -43,6 +52,13 @@ class RabbitMQSettings(BaseSettings):
 
 rabbitmq_settings = RabbitMQSettings()
 
-# aliases
+
+# =====================================================
+# Aliases
+# =====================================================
+
 ACADEMIC_QUEUE = rabbitmq_settings.queue
-ACADEMIC_ROUTING_KEYS = [rabbitmq_settings.routing_key]
+
+ACADEMIC_ROUTING_KEYS = [
+    rabbitmq_settings.routing_key
+]

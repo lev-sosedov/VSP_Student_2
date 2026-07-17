@@ -23,6 +23,11 @@ from schedule_service.schemas.schemas_schedule_change import (
     ScheduleChangeListResponse,
     ScheduleChangeResponse
 )
+from schedule_service.schemas.schemas_lesson_generation import (
+    LessonGenerationConflict,
+    LessonGenerationRequest,
+    LessonGenerationResponse
+)
 
 
 __all__ = [
@@ -43,4 +48,7 @@ __all__ = [
     "LessonRescheduleRequest",
     "ScheduleChangeResponse",
     "ScheduleChangeListResponse",
+    "LessonGenerationRequest",
+    "LessonGenerationConflict",
+    "LessonGenerationResponse",
 ]
