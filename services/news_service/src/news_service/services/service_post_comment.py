@@ -22,6 +22,9 @@ from news_service.schemas.schemas_post_comment import (
 from news_service.services.service_external_validation import (
     external_validation_service
 )
+from news_service.messaging.messaging_event_publisher import (
+    news_event_publisher
+)
 
 
 class PostCommentService:
@@ -90,6 +93,7 @@ class PostCommentService:
         self,
         comment_data: PostCommentCreate
     ) -> PostComment:
+
         await external_validation_service.get_active_user(
             user_id=comment_data.author_id
         )
@@ -117,6 +121,8 @@ class PostCommentService:
             raise ValueError(
                 "Комментарии к этой публикации отключены"
             )
+
+        parent_comment = None
 
         if comment_data.parent_comment_id is not None:
             parent_comment = (
@@ -171,6 +177,72 @@ class PostCommentService:
                 post=post
             )
         )
+
+        # =============================================
+        # Ответ на комментарий
+        # =============================================
+
+        if parent_comment is not None:
+            # Автор не должен получать уведомление
+            # о собственном ответе самому себе.
+            if (
+                    parent_comment.author_id
+                    != comment.author_id
+            ):
+                await news_event_publisher.publish(
+                    routing_key=(
+                        "news.comment.reply_created"
+                    ),
+                    payload={
+                        "post_id": post.id,
+                        "post_title": post.title,
+                        "post_slug": post.slug,
+                        "comment_id": comment.id,
+                        "parent_comment_id": (
+                            parent_comment.id
+                        ),
+                        "author_id": (
+                            comment.author_id
+                        ),
+                        "recipient_user_id": (
+                            parent_comment.author_id
+                        ),
+                        "text": comment.text,
+                        "created_at": (
+                            comment.created_at
+                        )
+                    }
+                )
+
+        # =============================================
+        # Новый основной комментарий
+        # =============================================
+
+        else:
+            # Автор поста не получает уведомление,
+            # если сам прокомментировал свой пост.
+            if post.created_by != comment.author_id:
+                await news_event_publisher.publish(
+                    routing_key=(
+                        "news.comment.created"
+                    ),
+                    payload={
+                        "post_id": post.id,
+                        "post_title": post.title,
+                        "post_slug": post.slug,
+                        "comment_id": comment.id,
+                        "author_id": (
+                            comment.author_id
+                        ),
+                        "recipient_user_id": (
+                            post.created_by
+                        ),
+                        "text": comment.text,
+                        "created_at": (
+                            comment.created_at
+                        )
+                    }
+                )
 
         return comment
 

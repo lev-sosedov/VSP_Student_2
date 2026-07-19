@@ -24,6 +24,9 @@ from news_service.schemas.schemas_post import (
 from news_service.services.service_external_validation import (
     external_validation_service
 )
+from news_service.messaging.messaging_event_publisher import (
+    news_event_publisher
+)
 
 
 class PostService:
@@ -218,10 +221,38 @@ class PostService:
                 publish_data.send_notification
             )
 
-        return await self.repository.update(
+        post = await self.repository.update(
             post=post,
             update_data=update_data
         )
+
+        if post.send_notification:
+            await news_event_publisher.publish(
+                routing_key="news.post.published",
+                payload={
+                    "post_id": post.id,
+                    "post_type": post.post_type,
+                    "title": post.title,
+                    "summary": post.summary,
+                    "slug": post.slug,
+                    "category": post.category,
+                    "cover_media_url": (
+                        post.cover_media_url
+                    ),
+                    "cover_media_type": (
+                        post.cover_media_type
+                    ),
+                    "created_by": post.created_by,
+                    "published_by": (
+                        post.published_by
+                    ),
+                    "published_at": (
+                        post.published_at
+                    )
+                }
+            )
+
+        return post
 
     # =================================================
     # Снять с публикации

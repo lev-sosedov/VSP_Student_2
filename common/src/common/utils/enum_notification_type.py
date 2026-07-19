@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 # Enum для уведомлений
 # типа уведомления
 class NotificationType(StrEnum):
@@ -12,9 +13,10 @@ class NotificationType(StrEnum):
     HOMEWORK_RESULT = "homework_result" # проверка работы;
 
     CHAT = "chat" # новое сообщение;
-    NEWS = "news" # новая новость;
-
-    USER = "user" # изменения аккаунта;
-    ACADEMIC = "academic" # группа, курс или учебный план.
-
     MESSAGE = "message"
+
+    NEWS = "news" # новая новость;
+    COMMENT = "comment"
+
+    USER = "user"
+    ACADEMIC = "academic"

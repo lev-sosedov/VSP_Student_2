@@ -23,6 +23,9 @@ from news_service.messaging.messaging_rabbit import (
 from news_service.messaging.messaging_rpc_client import (
     news_rpc_client
 )
+from news_service.messaging.messaging_event_publisher import (
+    news_event_publisher
+)
 
 
 API_PREFIX = "/api/v1"
@@ -80,12 +83,59 @@ async def lifespan(app: FastAPI):
             flush=True
         )
 
+
+    # =========================
+    # RabbitMQ event publisher
+    # =========================
+
+    try:
+        await news_event_publisher.start()
+
+        print(
+            "📨 News event publisher started",
+            flush=True
+        )
+
+    except Exception as error:
+        print(
+            f"❌ News event publisher failed: "
+            f"{error}",
+            flush=True
+        )
+
     print(
         "✅ News Service started",
         flush=True
     )
 
     yield
+
+    # =========================
+    # Graceful shutdown
+    # =========================
+
+    print(
+        "🛑 Stopping News Service...",
+        flush=True
+    )
+
+    # =========================
+    # Stop event publisher
+    # =========================
+
+    try:
+        await news_event_publisher.stop()
+
+    except Exception as error:
+        print(
+            f"Event publisher shutdown error: "
+            f"{error}",
+            flush=True
+        )
+
+    # =========================
+    # Stop RPC client
+    # =========================
 
     try:
         await news_rpc_client.stop()
@@ -95,6 +145,10 @@ async def lifespan(app: FastAPI):
             f"RPC client shutdown error: {error}",
             flush=True
         )
+
+    # =========================
+    # Close RabbitMQ
+    # =========================
 
     try:
         await RabbitConnection.close()
@@ -106,13 +160,8 @@ async def lifespan(app: FastAPI):
         )
 
     # =========================
-    # Graceful shutdown
+    # Close database
     # =========================
-
-    print(
-        "🛑 Stopping News Service...",
-        flush=True
-    )
 
     try:
         await engine.dispose()
@@ -220,5 +269,8 @@ async def health():
         "status": "ok",
         "rpc_client_started": (
             news_rpc_client.started
+        ),
+        "event_publisher_started": (
+            news_event_publisher.started
         )
     }

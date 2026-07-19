@@ -15,8 +15,13 @@ from notification_service.messaging.messaging_rabbit import (
 
 class NotificationRpcClient:
     def __init__(self):
-        self.channel: aio_pika.RobustChannel | None = None
-        self.callback_queue: aio_pika.RobustQueue | None = None
+        self.channel: (
+            aio_pika.RobustChannel | None
+        ) = None
+
+        self.callback_queue: (
+            aio_pika.RobustQueue | None
+        ) = None
 
         self.futures: dict[
             str,
@@ -33,7 +38,9 @@ class NotificationRpcClient:
         if self.started:
             return
 
-        self.channel = await RabbitConnection.get_channel()
+        self.channel = (
+            await RabbitConnection.get_channel()
+        )
 
         self.callback_queue = (
             await self.channel.declare_queue(
@@ -62,7 +69,9 @@ class NotificationRpcClient:
         self,
         message: aio_pika.IncomingMessage
     ) -> None:
-        correlation_id = message.correlation_id
+        correlation_id = (
+            message.correlation_id
+        )
 
         if not correlation_id:
             return
@@ -77,7 +86,7 @@ class NotificationRpcClient:
 
         try:
             response = json.loads(
-                message.body.decode()
+                message.body.decode("utf-8")
             )
 
             future.set_result(response)
@@ -109,9 +118,12 @@ class NotificationRpcClient:
                 "RPC callback queue is not initialized"
             )
 
-        correlation_id = str(uuid.uuid4())
+        correlation_id = str(
+            uuid.uuid4()
+        )
 
         loop = asyncio.get_running_loop()
+
         future = loop.create_future()
 
         self.futures[correlation_id] = future
@@ -121,8 +133,9 @@ class NotificationRpcClient:
                 {
                     "method": method,
                     "payload": payload
-                }
-            ).encode(),
+                },
+                ensure_ascii=False
+            ).encode("utf-8"),
             correlation_id=correlation_id,
             reply_to=self.callback_queue.name,
             content_type="application/json"
@@ -156,6 +169,31 @@ class NotificationRpcClient:
                 f"RPC-сервис не ответил: {method}"
             ) from error
 
+        except Exception:
+            self.futures.pop(
+                correlation_id,
+                None
+            )
+
+            raise
+
+    # =================================================
+    # USER
+    # =================================================
+
+    async def call_user(
+        self,
+        method: str,
+        payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        return await self.call(
+            queue_name=(
+                rabbitmq_settings.user_rpc_queue
+            ),
+            method=method,
+            payload=payload
+        )
+
     # =================================================
     # SCHEDULE
     # =================================================
@@ -167,7 +205,8 @@ class NotificationRpcClient:
     ) -> dict[str, Any]:
         return await self.call(
             queue_name=(
-                rabbitmq_settings.schedule_rpc_queue
+                rabbitmq_settings
+                .schedule_rpc_queue
             ),
             method=method,
             payload=payload
@@ -184,7 +223,8 @@ class NotificationRpcClient:
     ) -> dict[str, Any]:
         return await self.call(
             queue_name=(
-                rabbitmq_settings.academic_rpc_queue
+                rabbitmq_settings
+                .academic_rpc_queue
             ),
             method=method,
             payload=payload
@@ -211,4 +251,6 @@ class NotificationRpcClient:
         )
 
 
-notification_rpc_client = NotificationRpcClient()
+notification_rpc_client = (
+    NotificationRpcClient()
+)
