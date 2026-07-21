@@ -32,6 +32,9 @@ from schedule_service.messaging.messaging_rpc_server import (
 from schedule_service.messaging.messaging_event_publisher import (
     schedule_event_publisher
 )
+from schedule_service.api.api_attendance import (
+    router as attendance_router,
+)
 
 
 API_PREFIX = "/api/v1"
@@ -270,6 +273,11 @@ app.include_router(
 app.include_router(
     lesson_generation_router,
     prefix=API_PREFIX
+)
+
+app.include_router(
+    attendance_router,
+    prefix=API_PREFIX,
 )
 
 

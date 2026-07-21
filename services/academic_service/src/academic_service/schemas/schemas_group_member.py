@@ -83,3 +83,23 @@ class GroupMemberTransfer(BaseModel):
     old_group_id: int
     new_group_id: int
     user_id: int
+
+
+# Студент группы с данными профиля из User Service
+class GroupStudentResponse(BaseModel):
+    membership_id: int
+    group_id: int
+    user_id: int
+
+    user_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+    is_active: bool
+
+
+# Список студентов группы
+class GroupStudentListResponse(BaseModel):
+    total: int
+    items: list[GroupStudentResponse]

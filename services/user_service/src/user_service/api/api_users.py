@@ -262,6 +262,69 @@ async def activate_user(
 
 
 
+@router.patch(
+    "/{user_id}/verify-account",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Подтверждение аккаунта",
+    description="""
+Подтверждение аккаунта пользователя администратором.
+
+После подтверждения пользователь получает доступ
+к функциям, требующим подтверждённого аккаунта.
+""",
+    response_description="Пользователь с подтверждённым аккаунтом"
+)
+async def verify_account(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.verify_account(
+            user_id
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.patch(
+    "/{user_id}/verify-phone",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Подтверждение телефона",
+    description="""
+Подтверждение номера телефона пользователя.
+
+В дальнейшем endpoint должен вызываться после
+успешной проверки SMS-кода.
+""",
+    response_description="Пользователь с подтверждённым телефоном"
+)
+async def verify_phone(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.verify_phone(
+            user_id
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,

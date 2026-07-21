@@ -9,7 +9,8 @@ from academic_service.schemas.schemas_group_member import (
     GroupMemberResponse,
     GroupMemberExistsResponse,
     GroupMemberLeave,
-    GroupMemberTransfer
+    GroupMemberTransfer,
+    GroupStudentListResponse,
 )
 
 from academic_service.core.core_dependencies import get_group_member_service
@@ -222,6 +223,68 @@ async def get_group_members(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
+        )
+
+
+
+# =========================
+# Получить студентов группы
+# =========================
+@router.get(
+    "/group/{group_id}/students",
+    status_code=status.HTTP_200_OK,
+    response_model=GroupStudentListResponse,
+    summary="Получить студентов группы",
+    description="""
+Возвращает активных студентов выбранной учебной группы.
+
+Academic Service получает записи участников группы,
+а данные профилей пользователей запрашивает через RPC
+из User Service.
+
+Возвращаются:
+
+- идентификатор записи участия;
+- идентификатор пользователя;
+- имя пользователя;
+- имя и фамилия;
+- аватар;
+- дата добавления в группу.
+""",
+    response_description="Список студентов группы",
+    responses={
+        404: {
+            "description": "Группа не найдена"
+        },
+        500: {
+            "description": "Ошибка получения данных"
+        }
+    }
+)
+async def get_group_students(
+        group_id: int,
+        service: GroupMemberService = Depends(
+            get_group_member_service
+        )
+):
+    try:
+        return await service.get_group_students(
+            group_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error)
         )
 
 

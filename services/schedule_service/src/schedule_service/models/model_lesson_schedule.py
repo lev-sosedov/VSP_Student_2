@@ -89,3 +89,12 @@ class LessonSchedule(Base):
 
     # Связь с историей изменений конкретного занятия
     changes = relationship("ScheduleChange",back_populates="lesson",cascade="all, delete-orphan",passive_deletes=True,order_by="ScheduleChange.created_at")
+
+    # связь с посещаемостью
+    attendance_records = relationship(
+        "Attendance",
+        back_populates="lesson",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="Attendance.student_id",
+    )

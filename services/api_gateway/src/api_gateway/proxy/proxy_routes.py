@@ -26,6 +26,7 @@ PUBLIC_ROUTE_SERVICE_MAP: dict[str, str] = {
     "rooms": "schedule",
     "schedule-changes": "schedule",
     "schedule-templates": "schedule",
+    "attendance": "schedule",
 
     # Content service
     "homework-attachments": "content",

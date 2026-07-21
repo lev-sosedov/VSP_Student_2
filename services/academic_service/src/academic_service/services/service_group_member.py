@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+import asyncio
 
 from academic_service.clients.client_user_rpc import UserRpcClient
 from academic_service.repositories.repository_group_member import GroupMemberRepository
@@ -86,6 +87,104 @@ class GroupMemberService:
     async def get_user_groups(self, user_id: int):
 
         return await self.repo.get_by_user(user_id)
+
+    # получить активных студентов группы
+    # вместе с профилями из User Service
+    async def get_group_students(self, group_id: int):
+        group = await self.group_repo.get_by_id(group_id)
+
+        if not group:
+            raise ValueError("Group not found")
+
+        members = await self.repo.get_by_group(group_id)
+
+        student_members = [
+            member
+            for member in members
+            if (
+                str(member.role).lower() == "student"
+                and member.is_active
+                and member.left_at is None
+            )
+        ]
+
+        if not student_members:
+            return {
+                "total": 0,
+                "items": []
+            }
+
+        user_results = await asyncio.gather(
+            *[
+                self.user_client.get_user_by_id(
+                    member.user_id
+                )
+                for member in student_members
+            ],
+            return_exceptions=True
+        )
+
+        items: list[dict[str, Any]] = []
+
+        for member, user_result in zip(
+            student_members,
+            user_results
+        ):
+            if isinstance(user_result, Exception):
+                print(
+                    "Failed to load student "
+                    f"{member.user_id}: {user_result}",
+                    flush=True
+                )
+
+                continue
+
+            if not user_result:
+                continue
+
+            items.append(
+                {
+                    "membership_id": member.id,
+                    "group_id": member.group_id,
+                    "user_id": member.user_id,
+
+                    "user_name": user_result.get(
+                        "user_name"
+                    ),
+                    "first_name": user_result.get(
+                        "first_name"
+                    ),
+                    "last_name": user_result.get(
+                        "last_name"
+                    ),
+                    "avatar_url": user_result.get(
+                        "avatar_url"
+                    ),
+
+                    "is_active": member.is_active,
+                    "joined_at": member.joined_at,
+                }
+            )
+
+        items.sort(
+            key=lambda item: (
+                (
+                        item.get("last_name")
+                        or item.get("user_name")
+                        or ""
+                ).casefold(),
+                (
+                        item.get("first_name")
+                        or ""
+                ).casefold(),
+                item["user_id"],
+            )
+        )
+
+        return {
+            "total": len(items),
+            "items": items
+        }
 
     # изменить роль
     async def change_role(self, member_id: int, role: RoleType):
