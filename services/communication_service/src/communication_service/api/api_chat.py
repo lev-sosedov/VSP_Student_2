@@ -15,12 +15,16 @@ from communication_service.schemas.schemas_chat import (
     ChatActionRequest,
     ChatCreate,
     ChatDetailResponse,
+    ChatListItemResponse,
     ChatListResponse,
     ChatResponse,
     ChatUpdate
 )
 from communication_service.services.service_chat import (
     ChatService
+)
+from communication_service.services.service_message_read import (
+    MessageReadService
 )
 
 
@@ -70,6 +74,15 @@ async def create_chat_endpoint(
     summary="Получить список чатов"
 )
 async def get_chats_endpoint(
+    user_id: int | None = Query(
+        default=None,
+        gt=0,
+        description=(
+            "ID пользователя. Если передан, ответ содержит "
+            "unread_count и last_message, а также только чаты, "
+            "в которых пользователь является активным участником."
+        )
+    ),
     chat_type: ChatType | None = Query(
         default=None
     ),
@@ -102,11 +115,11 @@ async def get_chats_endpoint(
     ),
     session: AsyncSession = Depends(get_session)
 ):
-    service = ChatService(
+    chat_service = ChatService(
         session=session
     )
 
-    chats, total = await service.get_list(
+    chats, total = await chat_service.get_list(
         chat_type=chat_type,
         group_id=group_id,
         lesson_id=lesson_id,
@@ -117,9 +130,57 @@ async def get_chats_endpoint(
         limit=limit
     )
 
+    # Старое поведение сохраняется для внутренних запросов,
+    # которые пока не передают user_id.
+    if user_id is None:
+        return ChatListResponse(
+            total=total,
+            items=[
+                ChatListItemResponse.model_validate(
+                    chat
+                )
+                for chat in chats
+            ]
+        )
+
+    read_service = MessageReadService(
+        session=session
+    )
+
+    result_items: list[ChatListItemResponse] = []
+
+    for chat in chats:
+        try:
+            unread_count = (
+                await read_service.get_chat_unread_count(
+                    chat_id=chat.id,
+                    user_id=user_id
+                )
+            )
+        except ValueError:
+            # Пользователь не является активным участником.
+            # Такой чат не должен попадать в его список.
+            continue
+
+        last_message = (
+            await read_service.get_last_message(
+                chat_id=chat.id
+            )
+        )
+
+        result_items.append(
+            ChatListItemResponse(
+                **ChatResponse.model_validate(
+                    chat
+                ).model_dump(),
+                unread_count=unread_count,
+                last_message=last_message
+            )
+        )
+
     return ChatListResponse(
-        total=total,
-        items=chats
+        total=len(result_items),
+        items=result_items
     )
 
 

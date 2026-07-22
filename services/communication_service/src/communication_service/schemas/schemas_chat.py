@@ -197,6 +197,37 @@ class ChatResponse(BaseModel):
 
 
 # =====================================================
+# Последнее сообщение в списке чатов
+# =====================================================
+
+class ChatLastMessageResponse(BaseModel):
+    id: int
+    chat_id: int
+    sender_id: int
+
+    text: str | None = None
+
+    is_deleted: bool = False
+    created_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+# =====================================================
+# Элемент списка чатов
+# =====================================================
+
+class ChatListItemResponse(ChatResponse):
+    unread_count: int = 0
+
+    last_message: (
+        ChatLastMessageResponse | None
+    ) = None
+
+
+# =====================================================
 # Подробный ответ чата
 # =====================================================
 
@@ -210,4 +241,4 @@ class ChatDetailResponse(ChatResponse):
 
 class ChatListResponse(BaseModel):
     total: int
-    items: list[ChatResponse]
+    items: list[ChatListItemResponse]

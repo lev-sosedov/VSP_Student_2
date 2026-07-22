@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -9,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communication_service.db.db_session import (
     get_session
 )
+from communication_service.models.model_message import (
+    Message
+)
 from communication_service.schemas.schemas_message_read import (
     ChatReadAllRequest,
     ChatReadAllResponse,
@@ -19,6 +24,13 @@ from communication_service.schemas.schemas_message_read import (
 )
 from communication_service.services.service_message_read import (
     MessageReadService
+)
+from communication_service.websocket.websocket_events import (
+    build_chat_read_event,
+    build_message_read_event
+)
+from communication_service.websocket.websocket_manager import (
+    websocket_manager
 )
 
 
@@ -43,12 +55,23 @@ async def mark_message_as_read_endpoint(
     read_data: MessageReadCreate,
     session: AsyncSession = Depends(get_session)
 ):
+    message = await session.get(
+        Message,
+        message_id
+    )
+
+    if message is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Сообщение не найдено"
+        )
+
     service = MessageReadService(
         session=session
     )
 
     try:
-        return await service.mark_as_read(
+        message_read = await service.mark_as_read(
             message_id=message_id,
             user_id=read_data.user_id
         )
@@ -58,6 +81,20 @@ async def mark_message_as_read_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error)
         ) from error
+
+    event = build_message_read_event(
+        chat_id=message.chat_id,
+        message_id=message.id,
+        user_id=read_data.user_id,
+        read_at=message_read.read_at
+    )
+
+    await websocket_manager.broadcast_to_chat(
+        chat_id=message.chat_id,
+        event=event
+    )
+
+    return message_read
 
 
 # =====================================================
@@ -91,6 +128,19 @@ async def mark_chat_as_read_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error)
         ) from error
+
+    if last_message_id is not None:
+        event = build_chat_read_event(
+            chat_id=chat_id,
+            user_id=read_data.user_id,
+            last_read_message_id=last_message_id,
+            read_at=datetime.utcnow()
+        )
+
+        await websocket_manager.broadcast_to_chat(
+            chat_id=chat_id,
+            event=event
+        )
 
     return ChatReadAllResponse(
         chat_id=chat_id,

@@ -101,7 +101,7 @@ def build_message_event(
 
 
 # =====================================================
-# Событие прочтения
+# Событие прочтения одного сообщения
 # =====================================================
 
 def build_message_read_event(
@@ -116,6 +116,29 @@ def build_message_read_event(
             "chat_id": chat_id,
             "message_id": message_id,
             "user_id": user_id,
+            "read_at": read_at.isoformat()
+        }
+    }
+
+
+# =====================================================
+# Событие прочтения всего чата
+# =====================================================
+
+def build_chat_read_event(
+    chat_id: int,
+    user_id: int,
+    last_read_message_id: int,
+    read_at: datetime
+) -> dict[str, Any]:
+    return {
+        "event": "chat.read",
+        "data": {
+            "chat_id": chat_id,
+            "user_id": user_id,
+            "last_read_message_id": (
+                last_read_message_id
+            ),
             "read_at": read_at.isoformat()
         }
     }

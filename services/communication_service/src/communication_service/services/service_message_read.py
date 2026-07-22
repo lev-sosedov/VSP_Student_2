@@ -1,5 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from communication_service.models.model_message import (
+    Message
+)
 from communication_service.models.model_message_read import (
     MessageRead
 )
@@ -110,7 +113,6 @@ class MessageReadService:
 
         return message_read
 
-
     # =================================================
     # Прочитать весь чат
     # =================================================
@@ -166,6 +168,18 @@ class MessageReadService:
         )
 
         return created_count, last_message_id
+
+    # =================================================
+    # Получить последнее сообщение чата
+    # =================================================
+
+    async def get_last_message(
+        self,
+        chat_id: int
+    ) -> Message | None:
+        return await self.read_repository.get_last_message(
+            chat_id=chat_id
+        )
 
     # =================================================
     # Непрочитанные сообщения чата
