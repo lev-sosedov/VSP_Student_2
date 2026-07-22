@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import func, select
+from content_service.models.model_homework import Homework
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.utils.enum_homework_submission_status import (
@@ -57,35 +58,38 @@ class HomeworkSubmissionRepository:
     # =================================================
 
     async def get_list(
-        self,
-        homework_id: int | None = None,
-        student_id: int | None = None,
-        submission_status: (
-            HomeworkSubmissionStatus | None
-        ) = None,
-        is_late: bool | None = None,
-        checked_by: int | None = None,
-        skip: int = 0,
-        limit: int = 100
+            self,
+            homework_id: int | None = None,
+            student_id: int | None = None,
+            group_id: int | None = None,
+            submission_status: (
+                    HomeworkSubmissionStatus | None
+            ) = None,
+            is_late: bool | None = None,
+            checked_by: int | None = None,
+            skip: int = 0,
+            limit: int = 100
     ) -> tuple[list[HomeworkSubmission], int]:
         filters = []
 
         if homework_id is not None:
             filters.append(
-                HomeworkSubmission.homework_id
-                == homework_id
+                HomeworkSubmission.homework_id == homework_id
             )
 
         if student_id is not None:
             filters.append(
-                HomeworkSubmission.student_id
-                == student_id
+                HomeworkSubmission.student_id == student_id
+            )
+
+        if group_id is not None:
+            filters.append(
+                Homework.group_id == group_id
             )
 
         if submission_status is not None:
             filters.append(
-                HomeworkSubmission.status
-                == submission_status
+                HomeworkSubmission.status == submission_status
             )
 
         if is_late is not None:
@@ -95,12 +99,15 @@ class HomeworkSubmissionRepository:
 
         if checked_by is not None:
             filters.append(
-                HomeworkSubmission.checked_by
-                == checked_by
+                HomeworkSubmission.checked_by == checked_by
             )
 
         submissions_query = (
             select(HomeworkSubmission)
+            .join(
+                Homework,
+                Homework.id == HomeworkSubmission.homework_id
+            )
             .where(*filters)
             .order_by(
                 HomeworkSubmission.submitted_at.desc(),
@@ -113,13 +120,15 @@ class HomeworkSubmissionRepository:
 
         count_query = (
             select(func.count(HomeworkSubmission.id))
+            .join(
+                Homework,
+                Homework.id == HomeworkSubmission.homework_id
+            )
             .where(*filters)
         )
 
-        submissions_result = (
-            await self.session.execute(
-                submissions_query
-            )
+        submissions_result = await self.session.execute(
+            submissions_query
         )
 
         count_result = await self.session.execute(

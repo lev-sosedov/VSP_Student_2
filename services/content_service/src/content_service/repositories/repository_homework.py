@@ -50,6 +50,7 @@ class HomeworkRepository:
     async def get_list(
         self,
         lesson_id: int | None = None,
+        group_id: int | None = None,
         created_by: int | None = None,
         is_published: bool | None = None,
         is_active: bool | None = None,
@@ -61,6 +62,11 @@ class HomeworkRepository:
         if lesson_id is not None:
             filters.append(
                 Homework.lesson_id == lesson_id
+            )
+
+        if group_id is not None:
+            filters.append(
+                Homework.group_id == group_id
             )
 
         if created_by is not None:
@@ -118,6 +124,7 @@ class HomeworkRepository:
     async def create(
         self,
         lesson_id: int,
+        group_id: int,
         title: str,
         description: str,
         instructions: str | None,
@@ -129,6 +136,7 @@ class HomeworkRepository:
     ) -> Homework:
         homework = Homework(
             lesson_id=lesson_id,
+            group_id=group_id,
             title=title,
             description=description,
             instructions=instructions,

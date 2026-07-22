@@ -71,6 +71,10 @@ async def get_homeworks_endpoint(
         default=None,
         gt=0
     ),
+    group_id: int | None = Query(
+        default=None,
+        gt=0
+    ),
     created_by: int | None = Query(
         default=None,
         gt=0
@@ -98,6 +102,7 @@ async def get_homeworks_endpoint(
 
     homeworks, total = await service.get_list(
         lesson_id=lesson_id,
+        group_id=group_id,
         created_by=created_by,
         is_published=is_published,
         is_active=is_active,

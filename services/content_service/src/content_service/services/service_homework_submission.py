@@ -63,20 +63,22 @@ class HomeworkSubmissionService:
     # =================================================
 
     async def get_list(
-        self,
-        homework_id: int | None = None,
-        student_id: int | None = None,
-        submission_status: (
-            HomeworkSubmissionStatus | None
-        ) = None,
-        is_late: bool | None = None,
-        checked_by: int | None = None,
-        skip: int = 0,
-        limit: int = 100
+            self,
+            homework_id: int | None = None,
+            student_id: int | None = None,
+            group_id: int | None = None,
+            submission_status: (
+                    HomeworkSubmissionStatus | None
+            ) = None,
+            is_late: bool | None = None,
+            checked_by: int | None = None,
+            skip: int = 0,
+            limit: int = 100
     ) -> tuple[list[HomeworkSubmission], int]:
         return await self.submission_repository.get_list(
             homework_id=homework_id,
             student_id=student_id,
+            group_id=group_id,
             submission_status=submission_status,
             is_late=is_late,
             checked_by=checked_by,

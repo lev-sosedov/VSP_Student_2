@@ -59,6 +59,7 @@ class HomeworkService:
     async def get_list(
         self,
         lesson_id: int | None = None,
+        group_id: int | None = None,
         created_by: int | None = None,
         is_published: bool | None = None,
         is_active: bool | None = None,
@@ -67,6 +68,7 @@ class HomeworkService:
     ) -> tuple[list[Homework], int]:
         return await self.repository.get_list(
             lesson_id=lesson_id,
+            group_id=group_id,
             created_by=created_by,
             is_published=is_published,
             is_active=is_active,
@@ -78,17 +80,10 @@ class HomeworkService:
     # Создать домашнее задание
     # =================================================
 
-    async def create(
-        self,
-        homework_data: HomeworkCreate
-    ) -> Homework:
-        lesson = await validate_lesson(
-            lesson_id=homework_data.lesson_id
-        )
-
-        user = await validate_content_author(
-            user_id=homework_data.created_by
-        )
+    async def create(self, homework_data: HomeworkCreate) -> Homework:
+        lesson = await validate_lesson(lesson_id=homework_data.lesson_id)
+        user = await validate_content_author(user_id=homework_data.created_by)
+        group_id = lesson.get("group_id")
 
         if (
             user.get("role") in {"teacher", "TEACHER"}
@@ -111,12 +106,21 @@ class HomeworkService:
                 "уже создано"
             )
 
+        if (
+                not isinstance(group_id, int) or
+                group_id <= 0
+        ):
+            raise ValueError(
+                "У занятия не указана группа"
+            )
+
         self._validate_due_at(
             due_at=homework_data.due_at
         )
 
         homework = await self.repository.create(
             lesson_id=homework_data.lesson_id,
+            group_id=group_id,
             title=homework_data.title,
             description=homework_data.description,
             instructions=homework_data.instructions,
@@ -134,6 +138,7 @@ class HomeworkService:
             payload={
                 "homework_id": homework.id,
                 "lesson_id": homework.lesson_id,
+                "group_id": homework.group_id,
                 "created_by": homework.created_by,
                 "is_published": homework.is_published,
                 "due_at": homework.due_at

@@ -81,6 +81,10 @@ async def get_homework_submissions_endpoint(
         default=None,
         gt=0
     ),
+    group_id: int | None = Query(
+        default=None,
+        gt=0
+    ),
     submission_status: (
         HomeworkSubmissionStatus | None
     ) = Query(
@@ -112,6 +116,7 @@ async def get_homework_submissions_endpoint(
     submissions, total = await service.get_list(
         homework_id=homework_id,
         student_id=student_id,
+        group_id=group_id,
         submission_status=submission_status,
         is_late=is_late,
         checked_by=checked_by,

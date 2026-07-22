@@ -44,6 +44,16 @@ class Homework(Base):
         index=True
     )
 
+    # ID группы из academic-service
+    #
+    # ForeignKey не ставим, потому что группа
+    # находится в другом микросервисе и другой базе.
+    group_id: Mapped[int] = mapped_column(
+        Integer,
+        nullable=True,
+        index=True
+    )
+
     # Название домашнего задания
     title: Mapped[str] = mapped_column(
         String(255),

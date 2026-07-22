@@ -221,6 +221,7 @@ class HomeworkActivityRequest(BaseModel):
 class HomeworkResponse(BaseModel):
     id: int
     lesson_id: int
+    group_id: int | None
 
     title: str
     description: str
