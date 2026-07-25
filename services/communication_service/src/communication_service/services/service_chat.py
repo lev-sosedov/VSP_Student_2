@@ -1,9 +1,11 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.utils.enum_chat_member_role import (
     ChatMemberRole
 )
 from common.utils.enum_chat_type import ChatType
+from common.utils.enum_message_type import MessageType
 from communication_service.models.model_chat import (
     Chat
 )
@@ -12,6 +14,9 @@ from communication_service.repositories.repository_chat import (
 )
 from communication_service.repositories.repository_chat_member import (
     ChatMemberRepository
+)
+from communication_service.repositories.repository_message import (
+    MessageRepository
 )
 from communication_service.schemas.schemas_chat import (
     ChatCreate,
@@ -27,6 +32,8 @@ class ChatService:
         self,
         session: AsyncSession
     ):
+        self.session = session
+
         self.chat_repository = ChatRepository(
             session=session
         )
@@ -35,6 +42,10 @@ class ChatService:
             ChatMemberRepository(
                 session=session
             )
+        )
+
+        self.message_repository = MessageRepository(
+            session=session
         )
 
     # =================================================
@@ -229,6 +240,154 @@ class ChatService:
                 chat_id=chat.id,
                 members_data=members_to_create
             )
+
+    # =================================================
+    # Добавить нового участника в существующий чат группы
+    # =================================================
+
+    async def ensure_group_chat_member(
+        self,
+        group_id: int,
+        user_id: int,
+        academic_role: str
+    ) -> None:
+        chat = await self.chat_repository.get_group_chat(
+            group_id=group_id
+        )
+
+        if chat is None:
+            return
+
+        member_role = (
+            ChatMemberRole.ADMIN
+            if academic_role.lower() == "teacher"
+            else ChatMemberRole.MEMBER
+        )
+
+        member = await self.member_repository.get_member(
+            chat_id=chat.id,
+            user_id=user_id
+        )
+
+        if member is None:
+            await self.member_repository.create(
+                chat_id=chat.id,
+                user_id=user_id,
+                member_role=member_role,
+                added_by=chat.created_by
+            )
+            return
+
+        if not member.is_active:
+            await self.member_repository.reactivate(
+                member=member,
+                member_role=member_role,
+                added_by=chat.created_by
+            )
+            return
+
+        if member.member_role != member_role:
+            await self.member_repository.set_role(
+                member=member,
+                member_role=member_role
+            )
+
+    # =================================================
+    # Гарантировать личный чат студента с администрацией
+    # =================================================
+
+    async def ensure_admin_chat(
+        self,
+        student_id: int,
+        admin_id: int
+    ) -> Chat:
+        if student_id == admin_id:
+            raise ValueError(
+                "Студент и администратор не могут совпадать"
+            )
+
+        # Одновременная загрузка страницы и событие RabbitMQ
+        # не должны создавать два одинаковых админ-чата.
+        advisory_lock_key = (
+            (admin_id << 32) + student_id
+        )
+
+        await self.session.execute(
+            text(
+                "SELECT pg_advisory_xact_lock(:lock_key)"
+            ),
+            {
+                "lock_key": advisory_lock_key
+            }
+        )
+
+        existing_chats = (
+            await self.chat_repository.get_private_chats_between(
+                first_user_id=student_id,
+                second_user_id=admin_id
+            )
+        )
+
+        if existing_chats:
+            primary_chat = existing_chats[0]
+
+            # Дубли, созданные прежней версией, не удаляем:
+            # архивирование скрывает их, но сохраняет историю.
+            for duplicate_chat in existing_chats[1:]:
+                await self.chat_repository.set_archived(
+                    chat=duplicate_chat,
+                    is_archived=True
+                )
+
+            return primary_chat
+
+        await external_validation_service.get_available_user(
+            user_id=student_id
+        )
+
+        await external_validation_service.get_available_user(
+            user_id=admin_id
+        )
+
+        chat_data = ChatCreate(
+            chat_type=ChatType.PRIVATE,
+            title="Администрация",
+            description=(
+                "Если возникнут вопросы — "
+                "напишите администрации."
+            ),
+            created_by=admin_id
+        )
+
+        chat = await self.chat_repository.create(
+            chat_data=chat_data.model_dump()
+        )
+
+        await self.member_repository.create_owner(
+            chat_id=chat.id,
+            user_id=admin_id
+        )
+
+        await self.member_repository.create(
+            chat_id=chat.id,
+            user_id=student_id,
+            member_role=ChatMemberRole.MEMBER,
+            added_by=admin_id
+        )
+
+        await self.message_repository.create(
+            message_data={
+                "chat_id": chat.id,
+                "sender_id": admin_id,
+                "message_type": MessageType.TEXT,
+                "text": (
+                    "Если возникнут вопросы — "
+                    "напишите администрации."
+                )
+            }
+        )
+
+        return chat
 
     # =================================================
     # Изменить чат

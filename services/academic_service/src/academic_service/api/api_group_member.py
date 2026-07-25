@@ -14,6 +14,7 @@ from academic_service.schemas.schemas_group_member import (
 )
 
 from academic_service.core.core_dependencies import get_group_member_service
+from academic_service.events.events_publisher import event_publisher
 
 router = APIRouter(
     prefix="/group-members",
@@ -68,7 +69,19 @@ async def add_member(
         service: GroupMemberService = Depends(get_group_member_service)
 ):
     try:
-        return await service.add_member(data)
+        member = await service.add_member(data)
+
+        await event_publisher.publish_member_added(
+            {
+                "membership_id": member.id,
+                "group_id": member.group_id,
+                "user_id": member.user_id,
+                "role": member.role,
+                "is_active": member.is_active
+            }
+        )
+
+        return member
 
     except ValueError as e:
         raise HTTPException(

@@ -57,6 +57,16 @@ class RabbitMQSettings:
         "communication.#"
     )
 
+    academic_events_queue: str = os.getenv(
+        "ACADEMIC_EVENTS_QUEUE",
+        "communication_service.academic_events"
+    )
+
+    academic_member_added_routing_key: str = os.getenv(
+        "ACADEMIC_MEMBER_ADDED_ROUTING_KEY",
+        "academic.group_member.added"
+    )
+
     # =================================================
     # RPC QUEUES
     # =================================================

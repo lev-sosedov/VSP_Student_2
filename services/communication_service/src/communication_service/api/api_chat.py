@@ -15,11 +15,13 @@ from communication_service.schemas.schemas_chat import (
     ChatActionRequest,
     ChatCreate,
     ChatDetailResponse,
+    EnsureStudentAdminChatRequest,
     ChatListItemResponse,
     ChatListResponse,
     ChatResponse,
     ChatUpdate
 )
+from communication_service.core.core_config import settings
 from communication_service.services.service_chat import (
     ChatService
 )
@@ -182,6 +184,36 @@ async def get_chats_endpoint(
         total=len(result_items),
         items=result_items
     )
+
+
+# =====================================================
+# Гарантировать чат студента с администрацией
+# =====================================================
+
+@router.post(
+    "/student-admin/ensure",
+    response_model=ChatResponse,
+    summary="Создать или получить чат студента с администрацией"
+)
+async def ensure_student_admin_chat_endpoint(
+    request: EnsureStudentAdminChatRequest,
+    session: AsyncSession = Depends(get_session)
+):
+    service = ChatService(
+        session=session
+    )
+
+    try:
+        return await service.ensure_admin_chat(
+            student_id=request.student_id,
+            admin_id=settings.ADMIN_USER_ID
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error)
+        ) from error
 
 
 # =====================================================

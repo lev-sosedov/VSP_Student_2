@@ -27,5 +27,12 @@ class Settings:
         "development"
     )
 
+    ADMIN_USER_ID: int = int(
+        os.getenv(
+            "ADMIN_USER_ID",
+            "8"
+        )
+    )
+
 
 settings = Settings()

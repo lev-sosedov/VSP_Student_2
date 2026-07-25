@@ -2,8 +2,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from common.utils.enum_chat_type import ChatType
 from communication_service.models.model_chat import (
     Chat
+)
+from communication_service.models.model_chat_member import (
+    ChatMember
 )
 
 
@@ -126,13 +130,82 @@ class ChatRepository:
         group_id: int
     ) -> Chat | None:
         query = select(Chat).where(
+            Chat.chat_type == ChatType.GROUP,
             Chat.group_id == group_id,
-            Chat.is_active.is_(True)
+            Chat.is_active.is_(True),
+            Chat.is_archived.is_(False)
         )
 
         result = await self.session.execute(query)
 
         return result.scalars().first()
+
+    # =================================================
+    # Личный чат двух пользователей
+    # =================================================
+
+    async def get_private_chat_between(
+        self,
+        first_user_id: int,
+        second_user_id: int
+    ) -> Chat | None:
+        chats = await self.get_private_chats_between(
+            first_user_id=first_user_id,
+            second_user_id=second_user_id
+        )
+
+        return chats[0] if chats else None
+
+    async def get_private_chats_between(
+        self,
+        first_user_id: int,
+        second_user_id: int
+    ) -> list[Chat]:
+        first_user_chats = select(
+            ChatMember.chat_id
+        ).where(
+            ChatMember.user_id == first_user_id,
+            ChatMember.is_active.is_(True)
+        )
+
+        second_user_chats = select(
+            ChatMember.chat_id
+        ).where(
+            ChatMember.user_id == second_user_id,
+            ChatMember.is_active.is_(True)
+        )
+
+        active_members_count = (
+            select(func.count(ChatMember.id))
+            .where(
+                ChatMember.chat_id == Chat.id,
+                ChatMember.is_active.is_(True)
+            )
+            .correlate(Chat)
+            .scalar_subquery()
+        )
+
+        query = (
+            select(Chat)
+            .where(
+                Chat.chat_type == ChatType.PRIVATE,
+                Chat.is_active.is_(True),
+                Chat.is_archived.is_(False),
+                Chat.id.in_(first_user_chats),
+                Chat.id.in_(second_user_chats),
+                active_members_count == 2
+            )
+            .order_by(
+                Chat.created_at.asc(),
+                Chat.id.asc()
+            )
+        )
+
+        result = await self.session.execute(query)
+
+        return list(
+            result.scalars().all()
+        )
 
     # =================================================
     # Проверка чата занятия

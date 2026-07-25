@@ -1,4 +1,6 @@
+import asyncio
 from contextlib import asynccontextmanager
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI
 
@@ -32,9 +34,38 @@ from communication_service.api.api_message_attachment import (
 from communication_service.messaging.messaging_event_publisher import (
     communication_event_publisher
 )
+from communication_service.messaging.messaging_academic_event_consumer import (
+    academic_event_consumer
+)
 
 
 API_PREFIX = "/api/v1"
+
+
+# =====================================================
+# Надёжный запуск RabbitMQ-компонентов
+# =====================================================
+
+async def start_rabbit_component(
+    name: str,
+    starter: Callable[[], Awaitable[None]]
+) -> None:
+    while True:
+        try:
+            await starter()
+            return
+
+        except asyncio.CancelledError:
+            raise
+
+        except Exception as error:
+            print(
+                f"⏳ {name}: RabbitMQ ещё не готов "
+                f"({error}). Новая попытка через 5 секунд...",
+                flush=True
+            )
+
+            await asyncio.sleep(5)
 
 
 # =====================================================
@@ -75,39 +106,43 @@ async def lifespan(app: FastAPI):
     # RabbitMQ RPC client
     # =========================
 
-    try:
-        await communication_rpc_client.start()
+    await start_rabbit_component(
+        name="Communication RPC client",
+        starter=communication_rpc_client.start
+    )
 
-        print(
-            "🔁 Communication RPC client started",
-            flush=True
-        )
-
-    except Exception as error:
-        print(
-            f"❌ Communication RPC client failed: "
-            f"{error}",
-            flush=True
-        )
+    print(
+        "🔁 Communication RPC client started",
+        flush=True
+    )
 
     # =========================
     # RabbitMQ event publisher
     # =========================
 
-    try:
-        await communication_event_publisher.start()
+    await start_rabbit_component(
+        name="Communication event publisher",
+        starter=communication_event_publisher.start
+    )
 
-        print(
-            "📨 Communication event publisher started",
-            flush=True
-        )
+    print(
+        "📨 Communication event publisher started",
+        flush=True
+    )
 
-    except Exception as error:
-        print(
-            f"❌ Communication event publisher failed: "
-            f"{error}",
-            flush=True
-        )
+    # =========================
+    # Academic group member events
+    # =========================
+
+    await start_rabbit_component(
+        name="Academic member event consumer",
+        starter=academic_event_consumer.start
+    )
+
+    print(
+        "👥 Academic member event consumer started",
+        flush=True
+    )
 
     print(
         "✅ Communication Service started",
@@ -124,6 +159,19 @@ async def lifespan(app: FastAPI):
         "🛑 Stopping Communication Service...",
         flush=True
     )
+
+    # =========================
+    # Stop academic event consumer
+    # =========================
+
+    try:
+        await academic_event_consumer.stop()
+
+    except Exception as error:
+        print(
+            f"Academic event consumer shutdown error: {error}",
+            flush=True
+        )
 
     # =========================
     # Stop event publisher

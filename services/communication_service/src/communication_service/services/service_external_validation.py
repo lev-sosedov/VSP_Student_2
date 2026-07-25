@@ -48,6 +48,46 @@ class ExternalValidationService:
 
         return user
 
+    async def get_available_user(
+        self,
+        user_id: int
+    ) -> dict[str, Any]:
+        """
+        Проверка для системных операций.
+
+        Служебный чат может быть создан до подтверждения
+        аккаунта, но только для существующего и активного
+        пользователя.
+        """
+        response = await communication_rpc_client.call_user(
+            method="user.get_by_id",
+            payload={
+                "user_id": user_id
+            }
+        )
+
+        if not response.get("success"):
+            raise ValueError(
+                response.get(
+                    "error",
+                    "Ошибка User Service"
+                )
+            )
+
+        user = response.get("user")
+
+        if user is None:
+            raise ValueError(
+                "Пользователь не найден"
+            )
+
+        if not user.get("is_active"):
+            raise ValueError(
+                "Аккаунт пользователя заблокирован"
+            )
+
+        return user
+
     # =================================================
     # GROUP
     # =================================================
