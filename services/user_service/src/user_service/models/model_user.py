@@ -13,15 +13,16 @@ class User(Base):
     phone_number = Column(String(20), unique=True, nullable=False) # номер телефона пользователя
 
     # === ОСНОВНОЕ ===
-    user_name = Column(String(20), unique=True, nullable=True) # имя (не никнейм)
+    user_name = Column(String(50), unique=True, nullable=True) # имя (не никнейм)
     role = Column(Enum(RoleType), nullable=False, default=RoleType.USER) # роль в системе
 
     # === ПРОФИЛЬ ===
-    email = Column(String(100), unique=True, nullable=True) # почта
-    first_name = Column(String(20), nullable=True) # фамилия
-    last_name = Column(String(20), nullable=True) # отчество
+    email = Column(String(255), unique=True, nullable=True) # почта
+    first_name = Column(String(100), nullable=True) # фамилия
+    last_name = Column(String(100), nullable=True) # отчество
     birthday = Column(Date, nullable=True) # дата рождения
     avatar_url = Column(String(500), nullable=True) # аватарка
+    about = Column(String(1000), nullable=True)  # информация о пользователе
 
     # === ФЛАГИ ===
     is_active = Column(Boolean, default=True) # действующий аккаунт или нет

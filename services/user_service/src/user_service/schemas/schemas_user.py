@@ -14,10 +14,12 @@ class UserCreate(BaseModel):
 # обновление профиля
 class UserUpdate(BaseModel):
     email: Optional[str] = None
+    user_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     birthday: Optional[date] = None
     avatar_url: Optional[str] = None
+    about: Optional[str] = None
 
 
 # ответ пользователю
@@ -31,6 +33,7 @@ class UserResponse(BaseModel):
     last_name: Optional[str]
     birthday: Optional[date]
     avatar_url: Optional[str]
+    about: Optional[str]
 
     role: RoleType
 

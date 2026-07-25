@@ -20,146 +20,22 @@ from content_service.db.db_base import Base
 class Homework(Base):
     __tablename__ = "homeworks"
 
-    __table_args__ = (
-        UniqueConstraint(
-            "lesson_id",
-            name="uq_homeworks_lesson_id"
-        ),
-    )
+    __table_args__ = (UniqueConstraint("lesson_id", name="uq_homeworks_lesson_id"),)
 
-    # Личный идентификатор домашнего задания
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
-
-    # ID занятия из schedule-service
-    #
-    # ForeignKey не ставим, потому что занятие
-    # находится в другом микросервисе и другой базе.
-    lesson_id: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        index=True
-    )
-
-    # ID группы из academic-service
-    #
-    # ForeignKey не ставим, потому что группа
-    # находится в другом микросервисе и другой базе.
-    group_id: Mapped[int] = mapped_column(
-        Integer,
-        nullable=True,
-        index=True
-    )
-
-    # Название домашнего задания
-    title: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False
-    )
-
-    # Полное описание задания
-    description: Mapped[str] = mapped_column(
-        Text,
-        nullable=False
-    )
-
-    # Дополнительные инструкции
-    instructions: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True
-    )
-
-    # Максимальное количество баллов
-    #
-    # Пока можно использовать 100.
-    # Даже если на сайте не будет обычных оценок,
-    # баллы пригодятся для расчёта процента выполнения.
-    max_score: Mapped[int] = mapped_column(
-        Integer,
-        default=100,
-        nullable=False
-    )
-
-    # Крайний срок выполнения
-    due_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        nullable=True,
-        index=True
-    )
-
-    # Можно ли сдавать задание после срока
-    allow_late_submission: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True,
-        nullable=False
-    )
-
-    # Опубликовано ли задание для студентов
-    is_published: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-        index=True
-    )
-
-    # Активно ли домашнее задание
-    #
-    # Вместо физического удаления лучше деактивировать.
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True,
-        nullable=False,
-        index=True
-    )
-
-    # ID преподавателя или администратора,
-    # создавшего домашнее задание.
-    #
-    # Пользователь находится в user-service,
-    # поэтому ForeignKey не ставим.
-    created_by: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        index=True
-    )
-
-    # ID пользователя, последним изменившего задание
-    updated_by: Mapped[int | None] = mapped_column(
-        Integer,
-        nullable=True,
-        index=True
-    )
-
-    # Дата создания
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        nullable=False
-    )
-
-    # Дата последнего изменения
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-        nullable=False
-    )
-
-    # Работы студентов по этому домашнему заданию
-    submissions = relationship(
-        "HomeworkSubmission",
-        back_populates="homework",
-        cascade="all, delete-orphan",
-        passive_deletes=True
-    )
-
-    # Файлы, приложенные преподавателем к заданию
-    attachments = relationship(
-        "HomeworkAttachment",
-        back_populates="homework",
-        cascade="all, delete-orphan",
-        passive_deletes=True
-    )
+    id: Mapped[int] = mapped_column(Integer,primary_key=True,index=True)
+    lesson_id: Mapped[int] = mapped_column(Integer,nullable=False,index=True) # ID занятия из schedule-service
+    group_id: Mapped[int] = mapped_column(Integer,nullable=True, index=True) # ID группы из academic-service
+    title: Mapped[str] = mapped_column(String(255),nullable=False) # Название домашнего задания
+    description: Mapped[str] = mapped_column(Text, nullable=False) # Полное описание задания
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True) # Дополнительные инструкции
+    max_score: Mapped[int] = mapped_column(Integer,default=100, nullable=False) # Максимальное количество баллов
+    due_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True,index=True) # Крайний срок выполнения
+    allow_late_submission: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False) # Можно ли сдавать задание после срока
+    is_published: Mapped[bool] = mapped_column(Boolean,default=False,nullable=False,index=True) # Опубликовано ли задание для студентов
+    is_active: Mapped[bool] = mapped_column(Boolean,default=True,nullable=False,index=True) # Активно ли домашнее задание
+    created_by: Mapped[int] = mapped_column(Integer,nullable=False,index=True) # ID преподавателя или администратора,
+    updated_by: Mapped[int | None] = mapped_column(Integer,nullable=True,index=True) # ID пользователя, последним изменившего задание
+    created_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow,nullable=False) # Дата создания
+    updated_at: Mapped[datetime] = mapped_column(DateTime,default=datetime.utcnow,onupdate=datetime.utcnow,nullable=False) # Дата последнего изменения
+    submissions = relationship("HomeworkSubmission",back_populates="homework",cascade="all, delete-orphan",passive_deletes=True) # Работы студентов по этому домашнему заданию
+    attachments = relationship("HomeworkAttachment",back_populates="homework",cascade="all, delete-orphan",passive_deletes=True) # Файлы, приложенные преподавателем к заданию
