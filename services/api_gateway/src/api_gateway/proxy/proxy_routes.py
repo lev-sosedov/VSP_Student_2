@@ -10,6 +10,7 @@ PUBLIC_ROUTE_SERVICE_MAP: dict[str, str] = {
 
     # User service
     "users": "users",
+    "parent-students": "users",
 
     # Academic service
     "branch-address": "academic",

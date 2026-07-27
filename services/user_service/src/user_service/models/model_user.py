@@ -2,6 +2,8 @@ from sqlalchemy import Column, Integer, String, DateTime, Enum, Date, Boolean, f
 from user_service.db.db_base import Base
 from common.utils.enum_role import RoleType
 
+from sqlalchemy.orm import relationship
+
 
 class User(Base):
     __tablename__ = "users"
@@ -32,3 +34,25 @@ class User(Base):
     # === ТЕХНИЧЕСКИЕ ===
     created_at = Column(DateTime, default=func.now()) # дата регистрации
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now()) # дата обновления данных
+
+    # === СВЯЗИ РОДИТЕЛЕЙ И СТУДЕНТОВ ===
+
+    # Если этот пользователь имеет роль parent,
+    # здесь находятся его связи с детьми.
+    children_links = relationship(
+        "ParentStudentLink",
+        foreign_keys="ParentStudentLink.parent_id",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    # Если этот пользователь имеет роль student,
+    # здесь находятся связи с его родителями.
+    parent_links = relationship(
+        "ParentStudentLink",
+        foreign_keys="ParentStudentLink.student_id",
+        back_populates="student",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

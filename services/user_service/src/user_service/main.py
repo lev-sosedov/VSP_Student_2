@@ -5,10 +5,16 @@ from fastapi import FastAPI
 
 from user_service.db.db_base import Base
 from user_service.db.db_session import engine, AsyncSessionLocal
+
+from user_service.models.model_user import User
+from user_service.models.model_parent_student import ParentStudentLink
+
 from user_service.api.api_users import router as user_router
+from user_service.api.api_parent_students import router as parent_student_router
 from user_service.services.service_user import UserService
 from user_service.messaging.messaging_rabbit import consume_user_events
 from user_service.messaging.messaging_rpc_server import user_rpc_server
+
 
 
 @asynccontextmanager
@@ -151,6 +157,10 @@ app.include_router(
     prefix="/api/v1"
 )
 
+app.include_router(
+    parent_student_router,
+    prefix="/api/v1",
+)
 
 # =========================
 # HEALTH CHECK
