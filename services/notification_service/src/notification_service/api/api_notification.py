@@ -1,8 +1,12 @@
+import logging
+import smtplib
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     Query,
+    Request,
     status
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +16,10 @@ from common.utils.enum_notification_type import (
 )
 from notification_service.db.db_session import (
     get_session
+)
+from notification_service.schemas.schemas_contact import (
+    ContactMessageRequest,
+    ContactMessageResponse
 )
 from notification_service.schemas.schemas_notification import (
     NotificationCreate,
@@ -23,15 +31,107 @@ from notification_service.schemas.schemas_notification import (
     UserNotificationListResponse,
     UserNotificationResponse
 )
+from notification_service.services.service_contact_email import (
+    ContactEmailService
+)
 from notification_service.services.service_notification import (
     NotificationService
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
     prefix="/notifications",
     tags=["Notifications"]
 )
+
+
+# =====================================================
+# Публичная контактная форма сайта
+# Важно: маршрут находится перед динамическими маршрутами.
+# =====================================================
+
+@router.post(
+    "/contact",
+    response_model=ContactMessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Отправить заявку с публичного сайта"
+)
+async def send_contact_message_endpoint(
+    contact_data: ContactMessageRequest,
+    request: Request
+):
+    # Если бот заполнил скрытое поле, не отправляем письмо,
+    # но возвращаем успешный ответ, чтобы не подсказывать боту.
+    if contact_data.website:
+        return ContactMessageResponse(
+            success=True,
+            message="Сообщение отправлено"
+        )
+
+    service = ContactEmailService()
+
+    forwarded_for = request.headers.get(
+        "x-forwarded-for"
+    )
+
+    client_ip = (
+        forwarded_for.split(",")[0].strip()
+        if forwarded_for
+        else (
+            request.client.host
+            if request.client
+            else None
+        )
+    )
+
+    user_agent = request.headers.get(
+        "user-agent"
+    )
+
+    try:
+        await service.send(
+            contact_data=contact_data,
+            client_ip=client_ip,
+            user_agent=user_agent
+        )
+
+    except RuntimeError as error:
+        logger.error(
+            "Contact SMTP configuration error: %s",
+            error
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Отправка сообщений временно "
+                "не настроена"
+            )
+        ) from error
+
+    except (
+        smtplib.SMTPException,
+        OSError
+    ) as error:
+        logger.exception(
+            "Contact email delivery failed"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "Не удалось отправить сообщение. "
+                "Попробуйте немного позже"
+            )
+        ) from error
+
+    return ContactMessageResponse(
+        success=True,
+        message="Сообщение отправлено"
+    )
 
 
 # =====================================================

@@ -27,5 +27,39 @@ class Settings:
         "development"
     )
 
+    SMTP_HOST: str = os.getenv(
+        "SMTP_HOST",
+        "smtp.mail.ru"
+    )
+
+    SMTP_PORT: int = int(
+        os.getenv(
+            "SMTP_PORT",
+            "465"
+        )
+    )
+
+    SMTP_USER: str = os.getenv(
+        "SMTP_USER",
+        ""
+    )
+
+    SMTP_PASSWORD: str = os.getenv(
+        "SMTP_PASSWORD",
+        ""
+    )
+
+    CONTACT_RECEIVER_EMAIL: str = os.getenv(
+        "CONTACT_RECEIVER_EMAIL",
+        ""
+    )
+
+    SMTP_TIMEOUT_SECONDS: int = int(
+        os.getenv(
+            "SMTP_TIMEOUT_SECONDS",
+            "20"
+        )
+    )
+
 
 settings = Settings()

@@ -82,6 +82,9 @@ class UserService:
             offset
         )
 
+    async def get_public_teachers(self):
+        return await self.repo.get_public_teachers()
+
     async def get_user_by_phone(
         self,
         phone_number: str

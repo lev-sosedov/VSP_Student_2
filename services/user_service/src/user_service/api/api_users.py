@@ -5,6 +5,7 @@ from user_service.db.db_session import get_db
 from user_service.services.service_user import UserService
 
 from user_service.schemas.schemas_user import (
+    PublicTeacherResponse,
     UserCreate,
     UserResponse,
     UserUpdate,
@@ -20,340 +21,38 @@ router = APIRouter(prefix="/users", tags=["Users"])
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Создание пользователя",
-    description="""
-Создание нового пользователя.
-
-Используется:
-- auth-service после регистрации
-- admin-service для создания аккаунтов
-
-По умолчанию пользователь получает роль USER.
-""",
-    response_description="Созданный пользователь"
 )
 async def create_user(
     data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-
     service = UserService(db)
 
     try:
         return await service.create_user(data)
-
-    except ValueError as e:
+    except ValueError as error:
         raise HTTPException(
-            status_code=400,
-            detail=str(e)
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
         )
-
 
 
 @router.get(
-    "/{user_id}",
-    response_model=UserResponse,
+    "/public/teachers",
+    response_model=list[PublicTeacherResponse],
     status_code=status.HTTP_200_OK,
-    summary="Получить пользователя",
-    description="""
-Получение информации о пользователе по ID.
-
-Доступ:
-- admin
-- teacher (ограниченно)
-- сам пользователь
-""",
-    response_description="Данные пользователя"
+    summary="Получить публичный список преподавателей",
+    description=(
+        "Возвращает только безопасные публичные поля "
+        "активных пользователей с ролью TEACHER."
+    ),
 )
-async def get_user(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-    user = await service.get_user(user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
-
-    return user
-
-
-
-@router.get(
-    "/",
-    response_model=list[UserResponse],
-    summary="Получить список пользователей",
-    description="""
-Получение списка пользователей.
-
-Используется:
-- административная панель
-- управление пользователями
-
-Поддерживает пагинацию.
-""",
-    response_description="Список пользователей"
-)
-async def get_users(
-    limit: int = 20,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-    return await service.get_users(
-        limit,
-        offset
-    )
-
-
-
-@router.patch(
-    "/{user_id}",
-    response_model=UserResponse,
-    summary="Обновление профиля пользователя",
-    description="""
-Изменение данных пользователя:
-
-- имя
-- фамилия
-- email
-- дата рождения
-- аватар
-""",
-    response_description="Обновленный пользователь"
-)
-async def update_user(
-    user_id: int,
-    data: UserUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-    try:
-
-        return await service.update_user(
-            user_id,
-            data
-        )
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-
-
-
-@router.patch(
-    "/{user_id}/role",
-    response_model=UserResponse,
-    summary="Изменение роли пользователя",
-    description="""
-Изменение роли пользователя.
-
-Только ADMIN.
-
-Примеры:
-USER → STUDENT
-USER → TEACHER
-USER → PARENT
-""",
-    response_description="Пользователь с новой ролью"
-)
-async def change_role(
-    user_id: int,
-    data: UserRoleUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-
-    try:
-
-        return await service.change_role(
-            user_id,
-            data.role
-        )
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-
-
-
-@router.patch(
-    "/{user_id}/block",
-    response_model=UserResponse,
-    summary="Блокировка пользователя",
-    description="""
-Отключение аккаунта.
-
-Пользователь:
-- не может войти
-- не получает события
-- сохраняется в базе
-""",
-    response_description="Заблокированный пользователь"
-)
-async def block_user(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-
-    try:
-
-        return await service.block_user(
-            user_id
-        )
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-
-
-
-@router.patch(
-    "/{user_id}/activate",
-    response_model=UserResponse,
-    summary="Активация пользователя",
-    description="""
-Восстановление заблокированного аккаунта.
-""",
-    response_description="Активный пользователь"
-)
-async def activate_user(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-
-    try:
-
-        return await service.activate_user(
-            user_id
-        )
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-
-
-
-@router.patch(
-    "/{user_id}/verify-account",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Подтверждение аккаунта",
-    description="""
-Подтверждение аккаунта пользователя администратором.
-
-После подтверждения пользователь получает доступ
-к функциям, требующим подтверждённого аккаунта.
-""",
-    response_description="Пользователь с подтверждённым аккаунтом"
-)
-async def verify_account(
-    user_id: int,
+async def get_public_teachers(
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
 
-    try:
-        return await service.verify_account(
-            user_id
-        )
-
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
-
-
-@router.patch(
-    "/{user_id}/verify-phone",
-    response_model=UserResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Подтверждение телефона",
-    description="""
-Подтверждение номера телефона пользователя.
-
-В дальнейшем endpoint должен вызываться после
-успешной проверки SMS-кода.
-""",
-    response_description="Пользователь с подтверждённым телефоном"
-)
-async def verify_phone(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    service = UserService(db)
-
-    try:
-        return await service.verify_phone(
-            user_id
-        )
-
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
-
-
-
-@router.delete(
-    "/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Удаление пользователя",
-    description="""
-Удаление пользователя.
-
-Операция только для ADMIN.
-""",
-)
-async def delete_user(
-    user_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-
-    service = UserService(db)
-
-    try:
-
-        await service.delete_user(
-            user_id
-        )
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
+    return await service.get_public_teachers()
 
 
 @router.get(
@@ -361,25 +60,6 @@ async def delete_user(
     response_model=UserResponse,
     status_code=status.HTTP_200_OK,
     summary="Получить пользователя по номеру телефона",
-    description="""
-Поиск пользователя по номеру телефона.
-
-Используется:
-- auth-service при авторизации
-- восстановление доступа
-- проверка существующего аккаунта
-
-Возвращает полный профиль пользователя.
-""",
-    response_description="Данные пользователя",
-    responses={
-        404: {
-            "description": "Пользователь с таким номером не найден"
-        },
-        422: {
-            "description": "Некорректный формат номера телефона"
-        }
-    }
 )
 async def get_user_by_phone(
     phone_number: str = Path(
@@ -392,7 +72,6 @@ async def get_user_by_phone(
     ),
     db: AsyncSession = Depends(get_db)
 ):
-
     service = UserService(db)
 
     user = await service.get_user_by_phone(
@@ -406,3 +85,204 @@ async def get_user_by_phone(
         )
 
     return user
+
+
+@router.get(
+    "/",
+    response_model=list[UserResponse],
+    summary="Получить список пользователей",
+)
+async def get_users(
+    limit: int = 20,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    return await service.get_users(
+        limit,
+        offset
+    )
+
+
+@router.get(
+    "/{user_id}",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Получить пользователя",
+)
+async def get_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    user = await service.get_user(user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return user
+
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserResponse,
+    summary="Обновление профиля пользователя",
+)
+async def update_user(
+    user_id: int,
+    data: UserUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.update_user(
+            user_id,
+            data
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.patch(
+    "/{user_id}/role",
+    response_model=UserResponse,
+    summary="Изменение роли пользователя",
+)
+async def change_role(
+    user_id: int,
+    data: UserRoleUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.change_role(
+            user_id,
+            data.role
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.patch(
+    "/{user_id}/block",
+    response_model=UserResponse,
+    summary="Блокировка пользователя",
+)
+async def block_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.block_user(
+            user_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.patch(
+    "/{user_id}/activate",
+    response_model=UserResponse,
+    summary="Активация пользователя",
+)
+async def activate_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.activate_user(
+            user_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.patch(
+    "/{user_id}/verify-account",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Подтверждение аккаунта",
+)
+async def verify_account(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.verify_account(
+            user_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.patch(
+    "/{user_id}/verify-phone",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Подтверждение телефона",
+)
+async def verify_phone(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        return await service.verify_phone(
+            user_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удаление пользователя",
+)
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    service = UserService(db)
+
+    try:
+        await service.delete_user(
+            user_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error)
+        )

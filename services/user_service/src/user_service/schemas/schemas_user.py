@@ -44,6 +44,18 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
 
+    class Config:
+        from_attributes = True
+
+
+# безопасная публичная карточка преподавателя
+class PublicTeacherResponse(BaseModel):
+    id: int
+    user_name: Optional[str]
+    first_name: Optional[str]
+    last_name: Optional[str]
+    avatar_url: Optional[str]
+    about: Optional[str]
 
     class Config:
         from_attributes = True
@@ -64,7 +76,6 @@ class UserListResponse(BaseModel):
 
     is_active: bool
     is_account_verified: bool
-
 
     class Config:
         from_attributes = True

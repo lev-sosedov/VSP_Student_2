@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from common.utils.enum_role import RoleType
 from user_service.models.model_user import User
 
 
@@ -51,6 +52,23 @@ class UserRepository:
 
         return result.scalars().all()
 
+    async def get_public_teachers(self):
+        result = await self.db.execute(
+            select(User)
+            .where(
+                User.role == RoleType.TEACHER,
+                User.is_active.is_(True),
+            )
+            .order_by(
+                User.first_name.asc(),
+                User.user_name.asc(),
+                User.last_name.asc(),
+                User.id.asc(),
+            )
+        )
+
+        return list(result.scalars().all())
+
     async def update(self, user: User, data: dict):
         for field, value in data.items():
             setattr(user, field, value)
@@ -60,7 +78,6 @@ class UserRepository:
 
         return user
 
-
     async def save(self, user: User):
         self.db.add(user)
 
@@ -68,7 +85,6 @@ class UserRepository:
         await self.db.refresh(user)
 
         return user
-
 
     async def delete(self, user: User):
         await self.db.delete(user)
