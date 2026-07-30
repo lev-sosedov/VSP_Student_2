@@ -15,7 +15,7 @@ class User(Base):
     phone_number = Column(String(20), unique=True, nullable=False) # номер телефона пользователя
 
     # === ОСНОВНОЕ ===
-    user_name = Column(String(50), unique=True, nullable=True) # имя (не никнейм)
+    user_name = Column(String(50), nullable=True) # имя (не никнейм)
     role = Column(Enum(RoleType), nullable=False, default=RoleType.USER) # роль в системе
 
     # === ПРОФИЛЬ ===
