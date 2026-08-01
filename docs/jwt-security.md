@@ -157,9 +157,9 @@ URLs from token headers.
 
 ## `token_version`
 
-Neither `auth_users` nor `user_service.users` currently has `token_version`.
-No database change is made in this stage. The proposed authoritative source is
-`auth_service`, because session invalidation belongs with credentials.
+Stage 2.2 prepares `auth_service.auth_users.token_version` as the authoritative
+session generation. Its reversible Alembic migration is intentionally not
+applied by this change. The active HS256 issuer does not include or enforce it.
 
 Including a positive `token_version` claim identifies the session generation,
 but merely validating that the claim is a positive integer does **not** revoke
@@ -173,10 +173,11 @@ default for high-impact operations is fail closed when current-version status
 cannot be obtained. Any narrowly approved cached grace period must be bounded,
 observable, documented per endpoint, and must never silently become fail-open.
 
-The authoritative version increases after password changes, account blocking,
-role changes, and an administrator's “end all sessions” action. Until the
-current-version lookup exists, use short-lived access tokens and strict refresh
-token validation; do not claim that `token_version` alone provides revocation.
+An atomic increment operation is prepared for future password-change, account
+blocking, role-change, and administrator “end all sessions” workflows. It is not
+attached to those active flows in this stage. Until current-version comparison
+is wired into protected requests, do not claim that `token_version` alone
+provides revocation.
 
 ## Endpoint rollout and rollback
 
