@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from common.security.rbac import require_admin_mutations, require_teacher_or_admin_mutations
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from schedule_service.api.api_lesson_generation import (
     router as lesson_generation_router
@@ -250,34 +252,42 @@ Schedule Service микросервиса платформы ВШП Студен
 # ROUTES
 # =====================================================
 
+app.add_middleware(JWTAuthenticationMiddleware)
+
 app.include_router(
     room_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     schedule_template_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     lesson_schedule_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_teacher_or_admin_mutations)]
 )
 
 app.include_router(
     schedule_change_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_teacher_or_admin_mutations)]
 )
 
 app.include_router(
     lesson_generation_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_teacher_or_admin_mutations)]
 )
 
 app.include_router(
     attendance_router,
     prefix=API_PREFIX,
+    dependencies=[Depends(require_teacher_or_admin_mutations)],
 )
 
 

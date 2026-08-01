@@ -53,6 +53,15 @@ def get_current_principal(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     provider: JWTProvider = Depends(get_jwt_provider),
 ) -> CurrentPrincipal:
+    existing = getattr(request.state, "current_principal", None)
+    if isinstance(existing, CurrentPrincipal):
+        return existing
     return authenticate_credentials(
         request.headers.get("authorization"), credentials, provider
     )
+
+
+def get_optional_principal(request: Request) -> CurrentPrincipal | None:
+    """Return middleware-populated principal, allowing documented public GETs."""
+    existing = getattr(request.state, "current_principal", None)
+    return existing if isinstance(existing, CurrentPrincipal) else None

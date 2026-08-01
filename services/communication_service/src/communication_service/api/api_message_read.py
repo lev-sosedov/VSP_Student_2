@@ -32,11 +32,13 @@ from communication_service.websocket.websocket_events import (
 from communication_service.websocket.websocket_manager import (
     websocket_manager
 )
+from communication_service.api.dependencies import require_chat_member
 
 
 router = APIRouter(
     prefix="/message-reads",
-    tags=["Message reads"]
+    tags=["Message reads"],
+    dependencies=[Depends(require_chat_member)]
 )
 
 

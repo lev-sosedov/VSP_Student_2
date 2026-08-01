@@ -8,6 +8,10 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.utils.enum_chat_type import ChatType
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
+from communication_service.api.dependencies import require_chat_member
 from communication_service.db.db_session import (
     get_session
 )
@@ -48,8 +52,11 @@ router = APIRouter(
 )
 async def create_chat_endpoint(
     chat_data: ChatCreate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if chat_data.created_by != principal.user_id:
+        raise HTTPException(status_code=403, detail="created_by must match authenticated user")
     service = ChatService(
         session=session
     )
@@ -115,8 +122,12 @@ async def get_chats_endpoint(
         ge=1,
         le=500
     ),
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if user_id is not None and user_id != principal.user_id and principal.role is not RoleType.ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot query another user's chats")
+    effective_user_id = user_id if principal.role is RoleType.ADMIN and user_id is not None else principal.user_id
     chat_service = ChatService(
         session=session
     )
@@ -134,7 +145,7 @@ async def get_chats_endpoint(
 
     # Старое поведение сохраняется для внутренних запросов,
     # которые пока не передают user_id.
-    if user_id is None:
+    if effective_user_id is None:
         return ChatListResponse(
             total=total,
             items=[
@@ -156,7 +167,7 @@ async def get_chats_endpoint(
             unread_count = (
                 await read_service.get_chat_unread_count(
                     chat_id=chat.id,
-                    user_id=user_id
+                    user_id=effective_user_id
                 )
             )
         except ValueError:
@@ -197,8 +208,11 @@ async def get_chats_endpoint(
 )
 async def ensure_student_admin_chat_endpoint(
     request: EnsureStudentAdminChatRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role is not RoleType.ADMIN and request.student_id != principal.user_id:
+        raise HTTPException(status_code=403, detail="student_id must match authenticated user")
     service = ChatService(
         session=session
     )
@@ -227,6 +241,7 @@ async def ensure_student_admin_chat_endpoint(
 )
 async def get_chat_endpoint(
     chat_id: int,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -259,6 +274,7 @@ async def get_chat_endpoint(
 async def update_chat_endpoint(
     chat_id: int,
     chat_data: ChatUpdate,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -300,6 +316,7 @@ async def update_chat_endpoint(
 async def archive_chat_endpoint(
     chat_id: int,
     action_data: ChatActionRequest,
+    principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -319,7 +336,7 @@ async def archive_chat_endpoint(
     try:
         return await service.archive(
             chat=chat,
-            user_id=action_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:
@@ -341,6 +358,7 @@ async def archive_chat_endpoint(
 async def restore_chat_endpoint(
     chat_id: int,
     action_data: ChatActionRequest,
+    principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -360,7 +378,7 @@ async def restore_chat_endpoint(
     try:
         return await service.restore(
             chat=chat,
-            user_id=action_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:
@@ -382,6 +400,7 @@ async def restore_chat_endpoint(
 async def deactivate_chat_endpoint(
     chat_id: int,
     action_data: ChatActionRequest,
+    principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -401,7 +420,7 @@ async def deactivate_chat_endpoint(
     try:
         return await service.deactivate(
             chat=chat,
-            user_id=action_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:
@@ -423,6 +442,7 @@ async def deactivate_chat_endpoint(
 async def activate_chat_endpoint(
     chat_id: int,
     action_data: ChatActionRequest,
+    principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatService(
@@ -442,7 +462,7 @@ async def activate_chat_endpoint(
     try:
         return await service.activate(
             chat=chat,
-            user_id=action_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:

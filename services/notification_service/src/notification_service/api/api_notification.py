@@ -14,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.utils.enum_notification_type import (
     NotificationType
 )
+from common.security.permissions import require_self_or_admin
+from common.security.permissions import require_admin
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
 from notification_service.db.db_session import (
     get_session
 )
@@ -146,6 +150,7 @@ async def send_contact_message_endpoint(
 )
 async def create_notification_endpoint(
     notification_data: NotificationCreate,
+    _admin=Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -199,6 +204,7 @@ async def create_notification_endpoint(
 )
 async def get_user_notifications_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     only_unread: bool | None = Query(
         default=None
     ),
@@ -251,6 +257,7 @@ async def get_user_notifications_endpoint(
 )
 async def get_unread_count_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -278,6 +285,7 @@ async def get_unread_count_endpoint(
 )
 async def mark_all_notifications_as_read_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -306,6 +314,7 @@ async def mark_all_notifications_as_read_endpoint(
 async def get_user_notification_endpoint(
     notification_id: int,
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -338,8 +347,11 @@ async def get_user_notification_endpoint(
 async def mark_notification_as_read_endpoint(
     notification_id: int,
     read_data: NotificationReadRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role.value != "admin" and read_data.user_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     service = NotificationService(
         session=session
     )

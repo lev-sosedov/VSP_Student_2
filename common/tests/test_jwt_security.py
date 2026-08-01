@@ -76,6 +76,7 @@ def claims(**overrides: object) -> dict[str, object]:
     now = datetime.now(timezone.utc)
     result: dict[str, object] = {
         "sub": str(CANONICAL_USER_ID),
+        "auth_user_id": 7,
         "role": RoleType.STUDENT.value,
         "type": "access",
         "token_version": 1,

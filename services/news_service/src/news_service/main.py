@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from common.security.rbac import require_admin_mutations
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from news_service.db import db_init_models
 from news_service.db.db_base import Base
@@ -225,14 +227,22 @@ News Service микросервиса платформы ВШП Студент.
 # ROUTES
 # =====================================================
 
+app.add_middleware(
+    JWTAuthenticationMiddleware,
+    public_get_paths={"/api/v1/posts"},
+    public_get_prefixes={"/api/v1/posts/slug/"},
+)
+
 app.include_router(
     post_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     post_media_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
@@ -242,7 +252,8 @@ app.include_router(
 
 app.include_router(
     post_comment_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 

@@ -20,11 +20,13 @@ from communication_service.schemas.schemas_message_attachment import (
 from communication_service.services.service_message_attachment import (
     MessageAttachmentService
 )
+from communication_service.api.dependencies import require_chat_member
 
 
 router = APIRouter(
     prefix="/message-attachments",
-    tags=["Message attachments"]
+    tags=["Message attachments"],
+    dependencies=[Depends(require_chat_member)]
 )
 
 

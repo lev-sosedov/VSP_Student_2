@@ -27,6 +27,7 @@ from common.utils.enum_role import RoleType
 
 REQUIRED_ACCESS_CLAIMS = (
     "sub",
+    "auth_user_id",
     "role",
     "type",
     "token_version",
@@ -35,6 +36,7 @@ REQUIRED_ACCESS_CLAIMS = (
     "exp",
     "iss",
     "aud",
+    "jti",
 )
 
 
@@ -45,6 +47,44 @@ class JWTProvider:
         self._config = config
 
     def verify_access_token(self, token: str) -> CurrentPrincipal:
+        claims = self.verify_token(token, expected_type="access")
+
+        user_id = self._parse_positive_int(claims.get("sub"), InvalidSubjectError)
+        self._parse_positive_int(claims.get("auth_user_id"), InvalidSubjectError)
+        token_version = self._parse_positive_int(
+            claims.get("token_version"), InvalidTokenVersionError
+        )
+
+        try:
+            role = RoleType(claims.get("role"))
+        except (TypeError, ValueError) as exc:
+            raise InvalidRoleError() from exc
+
+        return CurrentPrincipal(
+            user_id=user_id,
+            role=role,
+            token_type="access",
+            token_version=token_version,
+            issued_at=self._timestamp_to_datetime(claims["iat"]),
+            expires_at=self._timestamp_to_datetime(claims["exp"]),
+            issuer=claims["iss"],
+            audience=self._parse_audience(claims["aud"]),
+            jti=claims.get("jti"),
+            claims=claims,
+        )
+
+    def verify_refresh_token(self, token: str) -> dict[str, Any]:
+        claims = self.verify_token(token, expected_type="refresh")
+        self._parse_positive_int(claims.get("sub"), InvalidSubjectError)
+        self._parse_positive_int(claims.get("auth_user_id"), InvalidSubjectError)
+        self._parse_positive_int(claims.get("token_version"), InvalidTokenVersionError)
+        try:
+            RoleType(claims.get("role"))
+        except (TypeError, ValueError) as exc:
+            raise InvalidRoleError() from exc
+        return claims
+
+    def verify_token(self, token: str, *, expected_type: str) -> dict[str, Any]:
         if not isinstance(token, str) or not token.strip():
             raise MalformedTokenError()
 
@@ -92,31 +132,9 @@ class JWTProvider:
         except jwt_exceptions.PyJWTError as exc:
             raise MalformedTokenError() from exc
 
-        if claims.get("type") != "access":
+        if claims.get("type") != expected_type:
             raise InvalidTokenTypeError()
-
-        user_id = self._parse_positive_int(claims.get("sub"), InvalidSubjectError)
-        token_version = self._parse_positive_int(
-            claims.get("token_version"), InvalidTokenVersionError
-        )
-
-        try:
-            role = RoleType(claims.get("role"))
-        except (TypeError, ValueError) as exc:
-            raise InvalidRoleError() from exc
-
-        return CurrentPrincipal(
-            user_id=user_id,
-            role=role,
-            token_type="access",
-            token_version=token_version,
-            issued_at=self._timestamp_to_datetime(claims["iat"]),
-            expires_at=self._timestamp_to_datetime(claims["exp"]),
-            issuer=claims["iss"],
-            audience=self._parse_audience(claims["aud"]),
-            jti=claims.get("jti"),
-            claims=claims,
-        )
+        return claims
 
     @staticmethod
     def _parse_positive_int(value: Any, error_type: type[Exception]) -> int:

@@ -14,6 +14,7 @@ from user_service.api.api_parent_students import router as parent_student_router
 from user_service.services.service_user import UserService
 from user_service.messaging.messaging_rabbit import consume_user_events
 from user_service.messaging.messaging_rpc_server import user_rpc_server
+from common.security.middleware import JWTAuthenticationMiddleware
 
 
 
@@ -151,6 +152,8 @@ Auth выполняется через auth-service.
 # =========================
 # API ROUTES
 # =========================
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     user_router,

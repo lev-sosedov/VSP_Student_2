@@ -6,6 +6,9 @@ from fastapi import (
     status
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from content_service.db.db_session import get_session
 from content_service.schemas.schemas_submission_attachment import (
@@ -25,6 +28,14 @@ router = APIRouter(
     tags=["Submission attachments"]
 )
 
+async def _submission_for(service, submission_id: int, principal: CurrentPrincipal):
+    submission = await service.submission_repository.get_by_id(submission_id=submission_id)
+    if submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if principal.role is RoleType.STUDENT and submission.student_id != principal.user_id:
+        raise HTTPException(status_code=403, detail="Submission ownership required")
+    return submission
+
 
 # =====================================================
 # Создать файл студенческой работы
@@ -38,11 +49,15 @@ router = APIRouter(
 )
 async def create_submission_attachment_endpoint(
     attachment_data: SubmissionAttachmentCreate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = SubmissionAttachmentService(
         session=session
     )
+    await _submission_for(service, attachment_data.submission_id, principal)
+    if attachment_data.uploaded_by != principal.user_id:
+        raise HTTPException(status_code=403, detail="uploaded_by must match authenticated user")
 
     try:
         return await service.create(
@@ -83,11 +98,16 @@ async def get_submission_attachments_endpoint(
         ge=1,
         le=500
     ),
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if submission_id is None and principal.role not in {RoleType.TEACHER, RoleType.ADMIN}:
+        raise HTTPException(status_code=403, detail="A submission filter is required")
     service = SubmissionAttachmentService(
         session=session
     )
+    if submission_id is not None:
+        await _submission_for(service, submission_id, principal)
 
     attachments, total = await service.get_list(
         submission_id=submission_id,
@@ -114,11 +134,13 @@ async def get_submission_attachments_endpoint(
 )
 async def get_attachments_by_submission_endpoint(
     submission_id: int,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = SubmissionAttachmentService(
         session=session
     )
+    await _submission_for(service, submission_id, principal)
 
     attachments, total = await service.get_list(
         submission_id=submission_id,
@@ -174,6 +196,7 @@ async def get_submission_attachment_endpoint(
 async def update_submission_attachment_endpoint(
     attachment_id: int,
     attachment_data: SubmissionAttachmentUpdate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = SubmissionAttachmentService(
@@ -189,6 +212,9 @@ async def update_submission_attachment_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Файл домашней работы не найден"
         )
+    await _submission_for(service, attachment.submission_id, principal)
+    if principal.role is RoleType.STUDENT and attachment.uploaded_by != principal.user_id:
+        raise HTTPException(status_code=403, detail="Attachment ownership required")
 
     try:
         return await service.update(
@@ -222,6 +248,7 @@ async def delete_submission_attachment_endpoint(
             "Позже будет получаться из JWT"
         )
     ),
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = SubmissionAttachmentService(
@@ -237,11 +264,14 @@ async def delete_submission_attachment_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Файл домашней работы не найден"
         )
+    await _submission_for(service, attachment.submission_id, principal)
+    if deleted_by != principal.user_id:
+        raise HTTPException(status_code=403, detail="deleted_by must match authenticated user")
 
     try:
         await service.delete(
             attachment=attachment,
-            deleted_by=deleted_by
+            deleted_by=principal.user_id
         )
 
     except ValueError as error:

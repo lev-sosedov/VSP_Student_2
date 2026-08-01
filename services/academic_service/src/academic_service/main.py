@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from common.security.rbac import require_admin_mutations
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from academic_service.api.api_branch import (
     router as branch_router
@@ -266,44 +268,54 @@ Academic Service микросервиса платформы ВШП Студен
 # ROUTES
 # =====================================================
 
+app.add_middleware(JWTAuthenticationMiddleware)
+
 app.include_router(
     module_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     education_plan_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     education_plan_module_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     direction_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     group_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     group_member_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     branch_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 app.include_router(
     branch_address_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_admin_mutations)]
 )
 
 
