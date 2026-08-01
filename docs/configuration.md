@@ -23,6 +23,12 @@
 > Иначе Docker подключит новые пустые volumes вместо существующих `postgres_data` и
 > `rabbitmq_data`.
 
+Каждый микросервис использует отдельную логическую базу PostgreSQL. Имена баз задаются
+переменными `AUTH_DB_NAME`, `USER_DB_NAME`, `ACADEMIC_DB_NAME`, `SCHEDULE_DB_NAME`,
+`CONTENT_DB_NAME`, `COMMUNICATION_DB_NAME`, `NOTIFICATION_DB_NAME` и `NEWS_DB_NAME`.
+Не заменяйте их одной общей `POSTGRES_DB`: это направит сервисы в другую логическую
+базу внутри того же volume и сделает существующие данные недоступными приложению.
+
 ## Production
 
 Production запускается без development override:
@@ -58,6 +64,8 @@ PostgreSQL, RabbitMQ, Redis и порты `8000-8007` не должны публ
 ## Обязательные production-значения
 
 - `POSTGRES_PASSWORD`
+- `AUTH_DB_NAME`, `USER_DB_NAME`, `ACADEMIC_DB_NAME`, `SCHEDULE_DB_NAME`
+- `CONTENT_DB_NAME`, `COMMUNICATION_DB_NAME`, `NOTIFICATION_DB_NAME`, `NEWS_DB_NAME`
 - `RABBITMQ_PASSWORD`
 - `REDIS_PASSWORD`
 - `JWT_SECRET_KEY`
