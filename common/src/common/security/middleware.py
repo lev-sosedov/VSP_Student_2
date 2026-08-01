@@ -17,6 +17,7 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
         app,
         *,
         public_paths: Collection[str] = (),
+        public_get_paths: Collection[str] = (),
         public_get_prefixes: Collection[str] = (),
     ) -> None:
         super().__init__(app)
@@ -24,6 +25,7 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
         if os.environ.get("ENVIRONMENT", os.environ.get("APP_ENV", "development")) != "production":
             base_public.update({"/docs", "/redoc", "/openapi.json"})
         self.public_paths = frozenset(public_paths) | frozenset(base_public)
+        self.public_get_paths = frozenset(public_get_paths)
         self.public_get_prefixes = tuple(public_get_prefixes)
 
     async def dispatch(
@@ -52,6 +54,7 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
     def _is_public(self, request: Request) -> bool:
         if request.method == "OPTIONS" or request.url.path in self.public_paths:
             return True
-        return request.method == "GET" and any(
-            request.url.path.startswith(prefix) for prefix in self.public_get_prefixes
+        return request.method == "GET" and (
+            request.url.path in self.public_get_paths
+            or any(request.url.path.startswith(prefix) for prefix in self.public_get_prefixes)
         )

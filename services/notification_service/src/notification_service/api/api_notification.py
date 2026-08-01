@@ -15,6 +15,7 @@ from common.utils.enum_notification_type import (
     NotificationType
 )
 from common.security.permissions import require_self_or_admin
+from common.security.permissions import require_admin
 from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
 from notification_service.db.db_session import (
@@ -149,6 +150,7 @@ async def send_contact_message_endpoint(
 )
 async def create_notification_endpoint(
     notification_data: NotificationCreate,
+    _admin=Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(

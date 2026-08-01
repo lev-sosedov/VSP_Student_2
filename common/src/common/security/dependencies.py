@@ -59,3 +59,9 @@ def get_current_principal(
     return authenticate_credentials(
         request.headers.get("authorization"), credentials, provider
     )
+
+
+def get_optional_principal(request: Request) -> CurrentPrincipal | None:
+    """Return middleware-populated principal, allowing documented public GETs."""
+    existing = getattr(request.state, "current_principal", None)
+    return existing if isinstance(existing, CurrentPrincipal) else None

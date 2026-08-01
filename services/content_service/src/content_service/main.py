@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from common.security.rbac import require_content_mutation
 from common.security.middleware import JWTAuthenticationMiddleware
 
 from content_service.api.api_lesson_content import (
@@ -234,36 +235,43 @@ app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     lesson_content_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 app.include_router(
     lesson_attachment_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 app.include_router(
     lesson_link_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 app.include_router(
     homework_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 app.include_router(
     homework_attachment_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 app.include_router(
     homework_submission_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 app.include_router(
     submission_attachment_router,
-    prefix=API_PREFIX
+    prefix=API_PREFIX,
+    dependencies=[Depends(require_content_mutation)]
 )
 
 # =====================================================
