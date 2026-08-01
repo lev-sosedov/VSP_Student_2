@@ -2,6 +2,9 @@ import json
 
 import aio_pika
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
+
+from common.identity import UnknownRoleError, UserIdentityProfile, normalize_role
 
 from user_service.db.db_session import (
     AsyncSessionLocal
@@ -125,6 +128,11 @@ class UserRpcServer:
                         )
                     )
 
+                elif method == "identity.resolve_by_auth_id":
+                    response = await self.resolve_identity_by_auth_id(
+                        payload=payload
+                    )
+
                 else:
                     response = {
                         "success": False,
@@ -137,7 +145,8 @@ class UserRpcServer:
             except Exception as error:
                 response = {
                     "success": False,
-                    "error": str(error)
+                    "error": "RPC request failed",
+                    "error_code": "rpc_request_failed"
                 }
 
             if (
@@ -165,6 +174,67 @@ class UserRpcServer:
                         )
                     )
                 )
+
+    # =================================================
+    # RESOLVE IDENTITY BY AUTH USER ID
+    # =================================================
+
+    async def resolve_identity_by_auth_id(self, payload: dict) -> dict:
+        auth_user_id = payload.get("auth_user_id")
+        try:
+            parsed_auth_user_id = int(auth_user_id)
+        except (TypeError, ValueError):
+            return {
+                "success": False,
+                "error": "auth_user_id must be a positive integer",
+                "error_code": "invalid_auth_user_id",
+            }
+        if parsed_auth_user_id <= 0:
+            return {
+                "success": False,
+                "error": "auth_user_id must be a positive integer",
+                "error_code": "invalid_auth_user_id",
+            }
+
+        try:
+            async with AsyncSessionLocal() as session:
+                user = await UserRepository(session).get_by_auth_id(
+                    parsed_auth_user_id
+                )
+        except MultipleResultsFound:
+            return {
+                "success": False,
+                "error": "Authentication identity has an invalid profile link",
+                "error_code": "identity_link_duplicate",
+            }
+
+        if user is None:
+            return {"success": True, "identity": None}
+        if user.auth_id is None:
+            return {
+                "success": False,
+                "error": "Identity link is missing",
+                "error_code": "identity_link_missing",
+            }
+        try:
+            identity = UserIdentityProfile(
+                user_id=user.id,
+                auth_user_id=user.auth_id,
+                role=normalize_role(user.role),
+                is_active=user.is_active,
+                is_account_verified=user.is_account_verified,
+            )
+        except UnknownRoleError:
+            return {
+                "success": False,
+                "error": "User role is not supported",
+                "error_code": "unknown_role",
+            }
+
+        return {
+            "success": True,
+            "identity": identity.model_dump(mode="json"),
+        }
 
     # =================================================
     # GET USER BY ID
