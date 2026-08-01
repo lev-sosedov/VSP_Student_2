@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
     Query,
     status
 )
@@ -10,6 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.utils.enum_chat_member_role import (
     ChatMemberRole
 )
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from communication_service.api.dependencies import require_chat_member
 from communication_service.db.db_session import (
     get_session
 )
@@ -73,6 +77,7 @@ async def create_chat_member_endpoint(
 )
 async def get_chat_members_endpoint(
     chat_id: int,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     is_active: bool | None = Query(
         default=None
     ),
@@ -126,6 +131,7 @@ async def get_chat_members_endpoint(
 )
 async def get_chat_member_endpoint(
     member_id: int,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatMemberService(
@@ -141,6 +147,12 @@ async def get_chat_member_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Участник чата не найден"
         )
+    if not await require_chat_member(
+        Request({"type": "http", "method": "GET", "path": "/", "path_params": {"chat_id": member.chat_id}, "query_string": b"", "headers": [], "state": {}}),
+        principal,
+        session,
+    ):
+        raise HTTPException(status_code=403, detail="Chat membership required")
 
     return member
 
@@ -198,6 +210,7 @@ async def update_chat_member_role_endpoint(
 async def deactivate_chat_member_endpoint(
     member_id: int,
     action_data: ChatMemberActionRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatMemberService(
@@ -217,7 +230,7 @@ async def deactivate_chat_member_endpoint(
     try:
         return await service.deactivate(
             member=member,
-            requested_by=action_data.requested_by
+            requested_by=principal.user_id
         )
 
     except ValueError as error:
@@ -239,6 +252,7 @@ async def deactivate_chat_member_endpoint(
 async def activate_chat_member_endpoint(
     member_id: int,
     action_data: ChatMemberActionRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatMemberService(
@@ -258,7 +272,7 @@ async def activate_chat_member_endpoint(
     try:
         return await service.activate(
             member=member,
-            requested_by=action_data.requested_by
+            requested_by=principal.user_id
         )
 
     except ValueError as error:
@@ -280,6 +294,7 @@ async def activate_chat_member_endpoint(
 async def leave_chat_endpoint(
     chat_id: int,
     leave_data: ChatLeaveRequest,
+    principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = ChatMemberService(
@@ -289,7 +304,7 @@ async def leave_chat_endpoint(
     try:
         return await service.leave(
             chat_id=chat_id,
-            user_id=leave_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:
