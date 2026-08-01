@@ -13,6 +13,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(
         ...,
         min_length=8,
+        max_length=128,
         example="Password123",
         description="Пароль пользователя"
     )
@@ -34,7 +35,6 @@ class RegisterResponse(BaseModel):
 
 # Логин
 class LoginRequest(BaseModel):
-
     phone_number: str = Field(
         ...,
         example="+79991234567"
@@ -58,3 +58,23 @@ class RefreshRequest(BaseModel):
         ...,
         description="Refresh JWT token"
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        description="Текущий пароль пользователя"
+    )
+
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Новый пароль пользователя"
+    )
+
+
+class ChangePasswordResponse(BaseModel):
+    message: str

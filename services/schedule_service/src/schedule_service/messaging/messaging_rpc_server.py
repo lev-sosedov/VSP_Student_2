@@ -117,6 +117,11 @@ class ScheduleRpcServer:
                         payload=payload
                     )
 
+                elif method == "lessons.get_by_ids":
+                    response = await self.get_lessons_by_ids(
+                        payload=payload
+                    )
+
                 else:
                     response = {
                         "success": False,
@@ -215,8 +220,116 @@ class ScheduleRpcServer:
                     "lesson_type": self.serialize_value(
                         lesson.lesson_type
                     ),
-                    "is_extra": lesson.is_extra
+                    "is_extra": lesson.is_extra,
+                    "lesson_date": (
+                        lesson.lesson_date.isoformat()
+                    ),
+                    "start_time": (
+                        lesson.start_time.isoformat()
+                    ),
+                    "end_time": (
+                        lesson.end_time.isoformat()
+                    )
                 }
+            }
+
+    # =====================================================
+    # GET LESSONS BY IDS
+    # =====================================================
+
+    async def get_lessons_by_ids(
+        self,
+        payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        raw_lesson_ids = payload.get(
+            "lesson_ids"
+        )
+
+        if not isinstance(
+            raw_lesson_ids,
+            list
+        ):
+            return {
+                "success": False,
+                "error": "lesson_ids must be a list"
+            }
+
+        lesson_ids: list[int] = []
+
+        try:
+            for raw_lesson_id in raw_lesson_ids:
+                lesson_id = int(raw_lesson_id)
+
+                if lesson_id <= 0:
+                    raise ValueError
+
+                if lesson_id not in lesson_ids:
+                    lesson_ids.append(lesson_id)
+
+        except (TypeError, ValueError):
+            return {
+                "success": False,
+                "error": (
+                    "lesson_ids must contain "
+                    "positive integers"
+                )
+            }
+
+        if len(lesson_ids) > 1000:
+            return {
+                "success": False,
+                "error": (
+                    "lesson_ids must contain "
+                    "no more than 1000 items"
+                )
+            }
+
+        if not lesson_ids:
+            return {
+                "success": True,
+                "lessons": []
+            }
+
+        async with AsyncSessionLocal() as session:
+            query = (
+                select(LessonSchedule)
+                .where(
+                    LessonSchedule.id.in_(
+                        lesson_ids
+                    )
+                )
+            )
+
+            result = await session.execute(
+                query
+            )
+
+            lessons = list(
+                result.scalars().all()
+            )
+
+            return {
+                "success": True,
+                "lessons": [
+                    {
+                        "id": lesson.id,
+                        "group_id": lesson.group_id,
+                        "teacher_id": lesson.teacher_id,
+                        "status": self.serialize_value(
+                            lesson.status
+                        ),
+                        "lesson_date": (
+                            lesson.lesson_date.isoformat()
+                        ),
+                        "start_time": (
+                            lesson.start_time.isoformat()
+                        ),
+                        "end_time": (
+                            lesson.end_time.isoformat()
+                        )
+                    }
+                    for lesson in lessons
+                ]
             }
 
     # =====================================================

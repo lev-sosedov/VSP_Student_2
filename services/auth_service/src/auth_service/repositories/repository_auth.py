@@ -9,13 +9,29 @@ class AuthRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-
-    async def get_user_by_phone(self, phone_number: str):
-        result = await self.db.execute(select(AuthUser).where(AuthUser.phone_number == phone_number))
+    async def get_user_by_phone(
+        self,
+        phone_number: str
+    ):
+        result = await self.db.execute(
+            select(AuthUser).where(
+                AuthUser.phone_number == phone_number
+            )
+        )
 
         return result.scalar_one_or_none()
 
+    async def get_user_by_id(
+        self,
+        user_id: int
+    ):
+        result = await self.db.execute(
+            select(AuthUser).where(
+                AuthUser.id == user_id
+            )
+        )
 
+        return result.scalar_one_or_none()
 
     async def create_user(self, data: dict):
         user = AuthUser(
@@ -25,6 +41,18 @@ class AuthRepository:
         )
 
         self.db.add(user)
+
+        await self.db.commit()
+        await self.db.refresh(user)
+
+        return user
+
+    async def update_password(
+        self,
+        user: AuthUser,
+        hashed_password: str
+    ) -> AuthUser:
+        user.hashed_password = hashed_password
 
         await self.db.commit()
         await self.db.refresh(user)

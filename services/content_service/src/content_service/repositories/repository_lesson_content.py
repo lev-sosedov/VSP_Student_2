@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from content_service.models.model_lesson_content import (
@@ -173,3 +173,18 @@ class LessonContentRepository:
         await self.session.refresh(lesson_content)
 
         return lesson_content
+
+    # =================================================
+    # Удалить материал вместе с вложениями и ссылками
+    # =================================================
+
+    async def delete(
+        self,
+        content_id: int
+    ) -> None:
+        query = delete(LessonContent).where(
+            LessonContent.id == content_id
+        )
+
+        await self.session.execute(query)
+        await self.session.flush()

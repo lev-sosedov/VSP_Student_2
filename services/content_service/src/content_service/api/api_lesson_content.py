@@ -281,3 +281,40 @@ async def unpublish_lesson_content_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error)
         ) from error
+
+
+# =====================================================
+# Удалить материал занятия
+# Вложения и ссылки удаляются каскадно.
+# =====================================================
+
+@router.delete(
+    "/{content_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Удалить материал занятия"
+)
+async def delete_lesson_content_endpoint(
+    content_id: int,
+    deleted_by: int = Query(..., gt=0),
+    session: AsyncSession = Depends(get_session)
+):
+    service = LessonContentService(
+        session=session
+    )
+
+    lesson_content = await service.get_by_id(
+        content_id=content_id
+    )
+
+    if lesson_content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Материал занятия не найден"
+        )
+
+    await service.delete(
+        lesson_content=lesson_content,
+        deleted_by=deleted_by
+    )
+
+    return {"deleted": True}

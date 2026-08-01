@@ -6,7 +6,9 @@ from auth_service.schemas.schemas_auth import (
     RegisterRequest,
     LoginRequest,
     TokenResponse,
-    RefreshRequest
+    RefreshRequest,
+    ChangePasswordRequest,
+    ChangePasswordResponse
 )
 
 from auth_service.services.services_auth import AuthService
@@ -49,24 +51,19 @@ async def register(
     data: RegisterRequest,
     db: AsyncSession = Depends(get_db)
 ):
-
     service = AuthService(db)
 
     try:
-
         return await service.register(data)
 
     except HTTPException:
         raise
 
-    except Exception as e:
-
+    except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
+            detail=str(error)
+        ) from error
 
 
 # LOGIN
@@ -100,24 +97,64 @@ async def login(
     data: LoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
-
     service = AuthService(db)
 
     try:
-
         return await service.login(data)
 
     except HTTPException:
         raise
 
-    except Exception as e:
-
+    except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=str(error)
+        ) from error
+
+
+# CHANGE PASSWORD
+@router.patch(
+    "/change-password",
+    response_model=ChangePasswordResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Изменить пароль текущего пользователя",
+    description=(
+        "Проверяет текущий пароль и сохраняет новый пароль. "
+        "Пользователь определяется по access token."
+    ),
+    responses={
+        400: {
+            "description": "Текущий пароль неверный или новый пароль совпадает со старым"
+        },
+        401: {
+            "description": "Недействительный access token"
+        },
+        403: {
+            "description": "Аккаунт заблокирован"
+        }
+    }
+)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    service = AuthService(db)
+
+    try:
+        return await service.change_password(
+            user_id=current_user["user_id"],
+            data=data
         )
 
+    except HTTPException:
+        raise
 
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error)
+        ) from error
 
 
 # REFRESH TOKEN
@@ -144,24 +181,19 @@ async def refresh(
     data: RefreshRequest,
     db: AsyncSession = Depends(get_db)
 ):
-
     service = AuthService(db)
 
     try:
-
         return await service.refresh(data)
 
     except HTTPException:
         raise
 
-    except Exception as e:
-
+    except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
+            detail=str(error)
+        ) from error
 
 
 # LOGOUT
@@ -184,7 +216,6 @@ async def refresh(
     }
 )
 async def logout():
-
     return {
         "message": "logout endpoint"
     }

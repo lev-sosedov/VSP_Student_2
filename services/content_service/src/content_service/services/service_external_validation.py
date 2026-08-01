@@ -50,6 +50,38 @@ async def validate_lesson(
     return lesson
 
 
+async def get_lessons_by_ids(
+    lesson_ids: list[int]
+) -> list[dict[str, Any]]:
+    response = await rabbit_rpc_client.call_schedule(
+        method="lessons.get_by_ids",
+        payload={
+            "lesson_ids": lesson_ids
+        }
+    )
+
+    validate_rpc_response(
+        response=response,
+        service_name="Schedule Service"
+    )
+
+    lessons = response.get(
+        "lessons",
+        []
+    )
+
+    if not isinstance(lessons, list):
+        raise ValueError(
+            "Schedule Service: lessons must be a list"
+        )
+
+    return [
+        lesson
+        for lesson in lessons
+        if isinstance(lesson, dict)
+    ]
+
+
 async def validate_content_author(
     user_id: int
 ) -> dict[str, Any]:

@@ -1,3 +1,5 @@
+from datetime import date, datetime, timedelta, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from content_service.models.model_lesson_content import (
@@ -11,6 +13,7 @@ from content_service.schemas.schemas_lesson_content import (
     LessonContentUpdate
 )
 from content_service.services.service_external_validation import (
+    get_lessons_by_ids,
     validate_content_author,
     validate_lesson
 )
@@ -61,13 +64,86 @@ class LessonContentService:
         skip: int = 0,
         limit: int = 100
     ) -> tuple[list[LessonContent], int]:
-        return await self.repository.get_list(
+        contents, total = await self.repository.get_list(
             lesson_id=lesson_id,
             created_by=created_by,
             is_published=is_published,
             skip=skip,
             limit=limit
         )
+
+        # Этот фильтр применяется только к запросам
+        # опубликованных материалов. Преподавательские
+        # запросы черновиков и библиотеки не изменяются.
+
+        if is_published is not True:
+            return contents, total
+
+        school_timezone = timezone(
+            timedelta(hours=3)
+        )
+
+        today = datetime.now(
+            school_timezone
+        ).date()
+
+        lessons = await get_lessons_by_ids(
+            [
+                lesson_content.lesson_id
+                for lesson_content in contents
+            ]
+        )
+
+        lessons_by_id = {
+            int(lesson["id"]): lesson
+            for lesson in lessons
+            if lesson.get("id") is not None
+        }
+
+        available_contents = [
+            lesson_content
+            for lesson_content in contents
+            if self._is_available_for_students(
+                lesson=lessons_by_id.get(
+                    lesson_content.lesson_id
+                ),
+                today=today
+            )
+        ]
+
+        return available_contents, len(available_contents)
+
+    # =================================================
+    # Доступен ли материал студентам по дате занятия
+    # =================================================
+
+    @staticmethod
+    def _is_available_for_students(
+        lesson: dict | None,
+        today: date
+    ) -> bool:
+        if lesson is None:
+            return False
+
+        if lesson.get("status") == "cancelled":
+            return False
+
+        lesson_date_value = lesson.get(
+            "lesson_date"
+        )
+
+        if not lesson_date_value:
+            return False
+
+        try:
+            lesson_date = date.fromisoformat(
+                str(lesson_date_value)
+            )
+
+        except ValueError:
+            return False
+
+        return lesson_date <= today
 
     # =================================================
     # Создать материал
@@ -176,4 +252,21 @@ class LessonContentService:
             lesson_content=lesson_content,
             is_published=False,
             updated_by=updated_by
+        )
+
+    # =================================================
+    # Удалить / открепить материал от занятия
+    # =================================================
+
+    async def delete(
+        self,
+        lesson_content: LessonContent,
+        deleted_by: int
+    ) -> None:
+        await validate_content_author(
+            user_id=deleted_by
+        )
+
+        await self.repository.delete(
+            content_id=lesson_content.id
         )
