@@ -1,0 +1,36 @@
+# Production override. Use explicitly so docker-compose.override.yml is not loaded:
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  api-gateway:
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set the production HTTPS origin in .env}
+    ports:
+      # Nginx/Caddy on the host proxies to this localhost-only port.
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+
+  auth-service:
+    environment:
+      ENVIRONMENT: production
+  user-service:
+    environment:
+      ENVIRONMENT: production
+  academic-service:
+    environment:
+      ENVIRONMENT: production
+  schedule-service:
+    environment:
+      ENVIRONMENT: production
+  content-service:
+    environment:
+      ENVIRONMENT: production
+  notification-service:
+    environment:
+      ENVIRONMENT: production
+  communication-service:
+    environment:
+      ENVIRONMENT: production
+  news-service:
+    environment:
+      ENVIRONMENT: production

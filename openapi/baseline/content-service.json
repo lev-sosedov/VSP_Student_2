@@ -1,0 +1,5524 @@
+{
+  "components": {
+    "schemas": {
+      "AttachmentType": {
+        "enum": [
+          "document",
+          "presentation",
+          "image",
+          "video",
+          "audio",
+          "archive",
+          "code",
+          "other"
+        ],
+        "title": "AttachmentType",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HomeworkActivityRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего активность. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "HomeworkActivityRequest",
+        "type": "object"
+      },
+      "HomeworkAttachmentCreate": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType",
+            "description": "Тип вложения"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Исходное имя файла",
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Размер файла в байтах",
+            "title": "File Size"
+          },
+          "file_url": {
+            "description": "URL файла в объектном хранилище",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "File Url",
+            "type": "string"
+          },
+          "homework_id": {
+            "description": "ID домашнего задания",
+            "exclusiveMinimum": 0.0,
+            "title": "Homework Id",
+            "type": "integer"
+          },
+          "is_visible": {
+            "default": true,
+            "description": "Видно ли вложение студентам",
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MIME-тип файла",
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "default": 0,
+            "description": "Порядок отображения",
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Название вложения",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "description": "ID преподавателя или администратора. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "homework_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "uploaded_by"
+        ],
+        "title": "HomeworkAttachmentCreate",
+        "type": "object"
+      },
+      "HomeworkAttachmentDeleteResponse": {
+        "properties": {
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "integer"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted",
+          "attachment_id"
+        ],
+        "title": "HomeworkAttachmentDeleteResponse",
+        "type": "object"
+      },
+      "HomeworkAttachmentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "HomeworkAttachmentListResponse",
+        "type": "object"
+      },
+      "HomeworkAttachmentResponse": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "title": "File Url",
+            "type": "string"
+          },
+          "homework_id": {
+            "title": "Homework Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "homework_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "file_name",
+          "mime_type",
+          "file_size",
+          "sort_order",
+          "is_visible",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "HomeworkAttachmentResponse",
+        "type": "object"
+      },
+      "HomeworkAttachmentUpdate": {
+        "properties": {
+          "attachment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "maxLength": 3000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID пользователя, изменяющего вложение. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "HomeworkAttachmentUpdate",
+        "type": "object"
+      },
+      "HomeworkAttachmentVisibilityRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего видимость. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "HomeworkAttachmentVisibilityRequest",
+        "type": "object"
+      },
+      "HomeworkCreate": {
+        "properties": {
+          "allow_late_submission": {
+            "default": true,
+            "description": "Разрешена ли сдача после срока",
+            "title": "Allow Late Submission",
+            "type": "boolean"
+          },
+          "created_by": {
+            "description": "ID преподавателя или администратора. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Created By",
+            "type": "integer"
+          },
+          "description": {
+            "description": "Описание домашнего задания",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Крайний срок выполнения",
+            "title": "Due At"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Дополнительные инструкции",
+            "title": "Instructions"
+          },
+          "is_published": {
+            "default": false,
+            "description": "Опубликовать задание сразу",
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "lesson_id": {
+            "description": "ID занятия из schedule-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "max_score": {
+            "default": 100,
+            "description": "Максимальное количество баллов",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Max Score",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Название домашнего задания",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lesson_id",
+          "title",
+          "description",
+          "created_by"
+        ],
+        "title": "HomeworkCreate",
+        "type": "object"
+      },
+      "HomeworkListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HomeworkResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "HomeworkListResponse",
+        "type": "object"
+      },
+      "HomeworkPublicationRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего публикацию. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "HomeworkPublicationRequest",
+        "type": "object"
+      },
+      "HomeworkResponse": {
+        "properties": {
+          "allow_late_submission": {
+            "title": "Allow Late Submission",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "max_score": {
+            "title": "Max Score",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_id",
+          "group_id",
+          "title",
+          "description",
+          "instructions",
+          "max_score",
+          "due_at",
+          "allow_late_submission",
+          "is_published",
+          "is_active",
+          "created_by",
+          "updated_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "HomeworkResponse",
+        "type": "object"
+      },
+      "HomeworkSubmissionAcceptRequest": {
+        "properties": {
+          "checked_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Checked By",
+            "type": "integer"
+          },
+          "score": {
+            "description": "Количество набранных баллов",
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "integer"
+          },
+          "teacher_comment": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Comment"
+          }
+        },
+        "required": [
+          "checked_by",
+          "score"
+        ],
+        "title": "HomeworkSubmissionAcceptRequest",
+        "type": "object"
+      },
+      "HomeworkSubmissionCreate": {
+        "properties": {
+          "answer_text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Текстовый ответ студента",
+            "title": "Answer Text"
+          },
+          "homework_id": {
+            "description": "ID домашнего задания",
+            "exclusiveMinimum": 0.0,
+            "title": "Homework Id",
+            "type": "integer"
+          },
+          "student_id": {
+            "description": "ID студента. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "homework_id",
+          "student_id"
+        ],
+        "title": "HomeworkSubmissionCreate",
+        "type": "object"
+      },
+      "HomeworkSubmissionListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "HomeworkSubmissionListResponse",
+        "type": "object"
+      },
+      "HomeworkSubmissionRejectRequest": {
+        "properties": {
+          "checked_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Checked By",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "teacher_comment": {
+            "description": "Причина отклонения работы",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Teacher Comment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checked_by",
+          "teacher_comment"
+        ],
+        "title": "HomeworkSubmissionRejectRequest",
+        "type": "object"
+      },
+      "HomeworkSubmissionResponse": {
+        "properties": {
+          "answer_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Text"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "checked_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked By"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "homework_id": {
+            "title": "Homework Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_late": {
+            "title": "Is Late",
+            "type": "boolean"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "status": {
+            "$ref": "#/components/schemas/HomeworkSubmissionStatus"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "teacher_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Comment"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "homework_id",
+          "student_id",
+          "answer_text",
+          "status",
+          "score",
+          "teacher_comment",
+          "checked_by",
+          "is_late",
+          "submitted_at",
+          "checked_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "HomeworkSubmissionResponse",
+        "type": "object"
+      },
+      "HomeworkSubmissionReviewRequest": {
+        "properties": {
+          "checked_by": {
+            "description": "ID преподавателя. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Checked By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checked_by"
+        ],
+        "title": "HomeworkSubmissionReviewRequest",
+        "type": "object"
+      },
+      "HomeworkSubmissionRevisionRequest": {
+        "properties": {
+          "checked_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Checked By",
+            "type": "integer"
+          },
+          "teacher_comment": {
+            "description": "Что студенту необходимо исправить",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Teacher Comment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checked_by",
+          "teacher_comment"
+        ],
+        "title": "HomeworkSubmissionRevisionRequest",
+        "type": "object"
+      },
+      "HomeworkSubmissionStatus": {
+        "enum": [
+          "draft",
+          "submitted",
+          "in_review",
+          "needs_revision",
+          "accepted",
+          "rejected"
+        ],
+        "title": "HomeworkSubmissionStatus",
+        "type": "string"
+      },
+      "HomeworkSubmissionSubmitRequest": {
+        "properties": {
+          "student_id": {
+            "description": "ID студента, отправляющего работу. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id"
+        ],
+        "title": "HomeworkSubmissionSubmitRequest",
+        "type": "object"
+      },
+      "HomeworkSubmissionUpdate": {
+        "properties": {
+          "answer_text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Text"
+          },
+          "student_id": {
+            "description": "ID студента, изменяющего работу. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "student_id"
+        ],
+        "title": "HomeworkSubmissionUpdate",
+        "type": "object"
+      },
+      "HomeworkUpdate": {
+        "properties": {
+          "allow_late_submission": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allow Late Submission"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "max_score": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Score"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID пользователя, изменяющего задание. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "HomeworkUpdate",
+        "type": "object"
+      },
+      "LessonAttachmentCreate": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType",
+            "description": "Тип вложения"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Исходное имя файла",
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Размер файла в байтах",
+            "title": "File Size"
+          },
+          "file_url": {
+            "description": "URL файла в объектном хранилище",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "File Url",
+            "type": "string"
+          },
+          "is_visible": {
+            "default": true,
+            "description": "Видно ли вложение студентам",
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "lesson_content_id": {
+            "description": "ID основного материала занятия",
+            "exclusiveMinimum": 0.0,
+            "title": "Lesson Content Id",
+            "type": "integer"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MIME-тип файла",
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "default": 0,
+            "description": "Порядок отображения",
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Название вложения",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "description": "ID пользователя, загрузившего файл. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lesson_content_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "uploaded_by"
+        ],
+        "title": "LessonAttachmentCreate",
+        "type": "object"
+      },
+      "LessonAttachmentDeleteResponse": {
+        "properties": {
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "integer"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted",
+          "attachment_id"
+        ],
+        "title": "LessonAttachmentDeleteResponse",
+        "type": "object"
+      },
+      "LessonAttachmentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LessonAttachmentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "LessonAttachmentListResponse",
+        "type": "object"
+      },
+      "LessonAttachmentResponse": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "title": "File Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "lesson_content_id": {
+            "title": "Lesson Content Id",
+            "type": "integer"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_content_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "file_name",
+          "mime_type",
+          "file_size",
+          "sort_order",
+          "is_visible",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "LessonAttachmentResponse",
+        "type": "object"
+      },
+      "LessonAttachmentUpdate": {
+        "properties": {
+          "attachment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "maxLength": 3000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID пользователя, изменяющего вложение. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonAttachmentUpdate",
+        "type": "object"
+      },
+      "LessonAttachmentVisibilityRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего видимость. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonAttachmentVisibilityRequest",
+        "type": "object"
+      },
+      "LessonContentCreate": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Основной текст материала",
+            "title": "Content"
+          },
+          "created_by": {
+            "description": "ID пользователя, создающего материал. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Created By",
+            "type": "integer"
+          },
+          "is_published": {
+            "default": false,
+            "description": "Опубликовать материал сразу",
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "lesson_id": {
+            "description": "ID занятия из schedule-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Краткое описание материала",
+            "title": "Summary"
+          },
+          "title": {
+            "description": "Заголовок материала",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lesson_id",
+          "title",
+          "created_by"
+        ],
+        "title": "LessonContentCreate",
+        "type": "object"
+      },
+      "LessonContentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LessonContentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "LessonContentListResponse",
+        "type": "object"
+      },
+      "LessonContentPublicationRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего публикацию. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonContentPublicationRequest",
+        "type": "object"
+      },
+      "LessonContentResponse": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_published": {
+            "title": "Is Published",
+            "type": "boolean"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_id",
+          "title",
+          "summary",
+          "content",
+          "is_published",
+          "created_by",
+          "updated_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LessonContentResponse",
+        "type": "object"
+      },
+      "LessonContentUpdate": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID пользователя, изменяющего материал. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonContentUpdate",
+        "type": "object"
+      },
+      "LessonLinkCreate": {
+        "properties": {
+          "added_by": {
+            "description": "ID пользователя, добавившего ссылку. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Added By",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Описание ссылки",
+            "title": "Description"
+          },
+          "is_visible": {
+            "default": true,
+            "description": "Видна ли ссылка студентам",
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "lesson_content_id": {
+            "description": "ID основного материала занятия",
+            "exclusiveMinimum": 0.0,
+            "title": "Lesson Content Id",
+            "type": "integer"
+          },
+          "sort_order": {
+            "default": 0,
+            "description": "Порядок отображения",
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Название ссылки",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "description": "Адрес полезного ресурса",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lesson_content_id",
+          "title",
+          "url",
+          "added_by"
+        ],
+        "title": "LessonLinkCreate",
+        "type": "object"
+      },
+      "LessonLinkDeleteResponse": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "link_id": {
+            "title": "Link Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted",
+          "link_id"
+        ],
+        "title": "LessonLinkDeleteResponse",
+        "type": "object"
+      },
+      "LessonLinkListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LessonLinkResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "LessonLinkListResponse",
+        "type": "object"
+      },
+      "LessonLinkResponse": {
+        "properties": {
+          "added_by": {
+            "title": "Added By",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "lesson_content_id": {
+            "title": "Lesson Content Id",
+            "type": "integer"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_content_id",
+          "title",
+          "url",
+          "description",
+          "sort_order",
+          "is_visible",
+          "added_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LessonLinkResponse",
+        "type": "object"
+      },
+      "LessonLinkUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID пользователя, изменяющего ссылку. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonLinkUpdate",
+        "type": "object"
+      },
+      "LessonLinkVisibilityRequest": {
+        "properties": {
+          "updated_by": {
+            "description": "ID пользователя, изменяющего видимость. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "LessonLinkVisibilityRequest",
+        "type": "object"
+      },
+      "SubmissionAttachmentCreate": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType",
+            "description": "Тип файла"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Исходное имя файла",
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Размер файла в байтах",
+            "title": "File Size"
+          },
+          "file_url": {
+            "description": "URL файла в объектном хранилище",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "File Url",
+            "type": "string"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MIME-тип файла",
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "default": 0,
+            "description": "Порядок отображения",
+            "minimum": 0.0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "submission_id": {
+            "description": "ID домашней работы студента",
+            "exclusiveMinimum": 0.0,
+            "title": "Submission Id",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Название файла",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "description": "ID студента, загрузившего файл. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "submission_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "uploaded_by"
+        ],
+        "title": "SubmissionAttachmentCreate",
+        "type": "object"
+      },
+      "SubmissionAttachmentDeleteResponse": {
+        "properties": {
+          "attachment_id": {
+            "title": "Attachment Id",
+            "type": "integer"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted",
+          "attachment_id"
+        ],
+        "title": "SubmissionAttachmentDeleteResponse",
+        "type": "object"
+      },
+      "SubmissionAttachmentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubmissionAttachmentResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "SubmissionAttachmentListResponse",
+        "type": "object"
+      },
+      "SubmissionAttachmentResponse": {
+        "properties": {
+          "attachment_type": {
+            "$ref": "#/components/schemas/AttachmentType"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "title": "File Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "submission_id": {
+            "title": "Submission Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "title": "Uploaded By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "submission_id",
+          "title",
+          "attachment_type",
+          "file_url",
+          "file_name",
+          "mime_type",
+          "file_size",
+          "sort_order",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "SubmissionAttachmentResponse",
+        "type": "object"
+      },
+      "SubmissionAttachmentUpdate": {
+        "properties": {
+          "attachment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "maxLength": 3000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "maxLength": 150,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "updated_by": {
+            "description": "ID студента, изменяющего файл. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Updated By",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_by"
+        ],
+        "title": "SubmissionAttachmentUpdate",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "\nContent Service микросервиса платформы ВШП Студент.\n\nОтвечает за:\n- материалы занятий;\n- текстовые материалы;\n- файлы уроков;\n- презентации;\n- изображения;\n- видео;\n- полезные ссылки;\n- домашние задания;\n- работы студентов;\n- файлы домашних работ;\n- проверку и результаты домашних заданий.\n\nНе отвечает за:\n- пользователей;\n- авторизацию;\n- группы;\n- расписание;\n- новости;\n- чаты;\n- уведомления.\n\nЗанятия получаются из schedule-service.\nПользователи получаются из user-service.\nГруппы получаются из academic-service.\n",
+    "title": "Content Service",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root"
+      }
+    },
+    "/api/v1/homework-attachments": {
+      "get": {
+        "operationId": "get_homework_attachments_endpoint_api_v1_homework_attachments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "homework_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Homework Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          },
+          {
+            "in": "query",
+            "name": "uploaded_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Uploaded By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить вложения домашних заданий",
+        "tags": [
+          "Homework attachments"
+        ]
+      },
+      "post": {
+        "operationId": "create_homework_attachment_endpoint_api_v1_homework_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkAttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Добавить вложение к домашнему заданию",
+        "tags": [
+          "Homework attachments"
+        ]
+      }
+    },
+    "/api/v1/homework-attachments/homework/{homework_id}": {
+      "get": {
+        "operationId": "get_homework_attachments_by_homework_endpoint_api_v1_homework_attachments_homework__homework_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить вложения домашнего задания",
+        "tags": [
+          "Homework attachments"
+        ]
+      }
+    },
+    "/api/v1/homework-attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "delete_homework_attachment_endpoint_api_v1_homework_attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ID пользователя, удаляющего вложение. Позже будет получаться из JWT",
+            "in": "query",
+            "name": "deleted_by",
+            "required": true,
+            "schema": {
+              "description": "ID пользователя, удаляющего вложение. Позже будет получаться из JWT",
+              "exclusiveMinimum": 0,
+              "title": "Deleted By",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Удалить вложение домашнего задания",
+        "tags": [
+          "Homework attachments"
+        ]
+      },
+      "get": {
+        "operationId": "get_homework_attachment_endpoint_api_v1_homework_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить вложение по ID",
+        "tags": [
+          "Homework attachments"
+        ]
+      },
+      "patch": {
+        "operationId": "update_homework_attachment_endpoint_api_v1_homework_attachments__attachment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkAttachmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить вложение домашнего задания",
+        "tags": [
+          "Homework attachments"
+        ]
+      }
+    },
+    "/api/v1/homework-attachments/{attachment_id}/hide": {
+      "post": {
+        "operationId": "hide_homework_attachment_endpoint_api_v1_homework_attachments__attachment_id__hide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkAttachmentVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Скрыть вложение от студентов",
+        "tags": [
+          "Homework attachments"
+        ]
+      }
+    },
+    "/api/v1/homework-attachments/{attachment_id}/show": {
+      "post": {
+        "operationId": "show_homework_attachment_endpoint_api_v1_homework_attachments__attachment_id__show_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkAttachmentVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Показать вложение студентам",
+        "tags": [
+          "Homework attachments"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions": {
+      "get": {
+        "operationId": "get_homework_submissions_endpoint_api_v1_homework_submissions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "homework_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Homework Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/HomeworkSubmissionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_late",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Late"
+            }
+          },
+          {
+            "in": "query",
+            "name": "checked_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Checked By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список домашних работ",
+        "tags": [
+          "Homework submissions"
+        ]
+      },
+      "post": {
+        "operationId": "create_homework_submission_endpoint_api_v1_homework_submissions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать черновик домашней работы",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/homework/{homework_id}": {
+      "get": {
+        "operationId": "get_submissions_by_homework_endpoint_api_v1_homework_submissions_homework__homework_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/HomeworkSubmissionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить работы по домашнему заданию",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/student/{student_id}": {
+      "get": {
+        "operationId": "get_submissions_by_student_endpoint_api_v1_homework_submissions_student__student_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "title": "Student Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/HomeworkSubmissionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить домашние работы студента",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}": {
+      "get": {
+        "operationId": "get_homework_submission_endpoint_api_v1_homework_submissions__submission_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить домашнюю работу по ID",
+        "tags": [
+          "Homework submissions"
+        ]
+      },
+      "patch": {
+        "operationId": "update_homework_submission_endpoint_api_v1_homework_submissions__submission_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить черновик домашней работы",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}/accept": {
+      "post": {
+        "operationId": "accept_submission_endpoint_api_v1_homework_submissions__submission_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Принять домашнюю работу",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}/reject": {
+      "post": {
+        "operationId": "reject_submission_endpoint_api_v1_homework_submissions__submission_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Отклонить домашнюю работу",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}/request-revision": {
+      "post": {
+        "operationId": "request_revision_endpoint_api_v1_homework_submissions__submission_id__request_revision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionRevisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Вернуть работу на доработку",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}/start-review": {
+      "post": {
+        "operationId": "start_review_endpoint_api_v1_homework_submissions__submission_id__start_review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Начать проверку домашней работы",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homework-submissions/{submission_id}/submit": {
+      "post": {
+        "operationId": "submit_homework_submission_endpoint_api_v1_homework_submissions__submission_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkSubmissionSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkSubmissionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Отправить работу преподавателю",
+        "tags": [
+          "Homework submissions"
+        ]
+      }
+    },
+    "/api/v1/homeworks": {
+      "get": {
+        "operationId": "get_homeworks_endpoint_api_v1_homeworks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_published",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Published"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список домашних заданий",
+        "tags": [
+          "Homeworks"
+        ]
+      },
+      "post": {
+        "operationId": "create_homework_endpoint_api_v1_homeworks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать домашнее задание",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/lesson/{lesson_id}": {
+      "get": {
+        "operationId": "get_homework_by_lesson_endpoint_api_v1_homeworks_lesson__lesson_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить домашнее задание занятия",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/{homework_id}": {
+      "get": {
+        "operationId": "get_homework_endpoint_api_v1_homeworks__homework_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить домашнее задание по ID",
+        "tags": [
+          "Homeworks"
+        ]
+      },
+      "patch": {
+        "operationId": "update_homework_endpoint_api_v1_homeworks__homework_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить домашнее задание",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/{homework_id}/activate": {
+      "post": {
+        "operationId": "activate_homework_endpoint_api_v1_homeworks__homework_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkActivityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Активировать домашнее задание",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/{homework_id}/deactivate": {
+      "post": {
+        "operationId": "deactivate_homework_endpoint_api_v1_homeworks__homework_id__deactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkActivityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Деактивировать домашнее задание",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/{homework_id}/publish": {
+      "post": {
+        "operationId": "publish_homework_endpoint_api_v1_homeworks__homework_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Опубликовать домашнее задание",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/homeworks/{homework_id}/unpublish": {
+      "post": {
+        "operationId": "unpublish_homework_endpoint_api_v1_homeworks__homework_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "homework_id",
+            "required": true,
+            "schema": {
+              "title": "Homework Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeworkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Снять домашнее задание с публикации",
+        "tags": [
+          "Homeworks"
+        ]
+      }
+    },
+    "/api/v1/lesson-attachments": {
+      "get": {
+        "operationId": "get_lesson_attachments_endpoint_api_v1_lesson_attachments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_content_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Content Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          },
+          {
+            "in": "query",
+            "name": "uploaded_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Uploaded By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список вложений",
+        "tags": [
+          "Lesson attachments"
+        ]
+      },
+      "post": {
+        "operationId": "create_lesson_attachment_endpoint_api_v1_lesson_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonAttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Добавить вложение к материалу занятия",
+        "tags": [
+          "Lesson attachments"
+        ]
+      }
+    },
+    "/api/v1/lesson-attachments/content/{lesson_content_id}": {
+      "get": {
+        "operationId": "get_content_attachments_endpoint_api_v1_lesson_attachments_content__lesson_content_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_content_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Content Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить вложения материала занятия",
+        "tags": [
+          "Lesson attachments"
+        ]
+      }
+    },
+    "/api/v1/lesson-attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "delete_lesson_attachment_endpoint_api_v1_lesson_attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ID пользователя, удаляющего вложение. Позже будет получаться из JWT",
+            "in": "query",
+            "name": "deleted_by",
+            "required": true,
+            "schema": {
+              "description": "ID пользователя, удаляющего вложение. Позже будет получаться из JWT",
+              "exclusiveMinimum": 0,
+              "title": "Deleted By",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Удалить вложение",
+        "tags": [
+          "Lesson attachments"
+        ]
+      },
+      "get": {
+        "operationId": "get_lesson_attachment_endpoint_api_v1_lesson_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить вложение по ID",
+        "tags": [
+          "Lesson attachments"
+        ]
+      },
+      "patch": {
+        "operationId": "update_lesson_attachment_endpoint_api_v1_lesson_attachments__attachment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonAttachmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить вложение",
+        "tags": [
+          "Lesson attachments"
+        ]
+      }
+    },
+    "/api/v1/lesson-attachments/{attachment_id}/hide": {
+      "post": {
+        "operationId": "hide_lesson_attachment_endpoint_api_v1_lesson_attachments__attachment_id__hide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonAttachmentVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Скрыть вложение от студентов",
+        "tags": [
+          "Lesson attachments"
+        ]
+      }
+    },
+    "/api/v1/lesson-attachments/{attachment_id}/show": {
+      "post": {
+        "operationId": "show_lesson_attachment_endpoint_api_v1_lesson_attachments__attachment_id__show_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonAttachmentVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Показать вложение студентам",
+        "tags": [
+          "Lesson attachments"
+        ]
+      }
+    },
+    "/api/v1/lesson-contents": {
+      "get": {
+        "operationId": "get_lesson_contents_endpoint_api_v1_lesson_contents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_published",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Published"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список материалов занятий",
+        "tags": [
+          "Lesson contents"
+        ]
+      },
+      "post": {
+        "operationId": "create_lesson_content_endpoint_api_v1_lesson_contents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonContentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать материал занятия",
+        "tags": [
+          "Lesson contents"
+        ]
+      }
+    },
+    "/api/v1/lesson-contents/lesson/{lesson_id}": {
+      "get": {
+        "operationId": "get_lesson_content_by_lesson_endpoint_api_v1_lesson_contents_lesson__lesson_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить материал конкретного занятия",
+        "tags": [
+          "Lesson contents"
+        ]
+      }
+    },
+    "/api/v1/lesson-contents/{content_id}": {
+      "delete": {
+        "operationId": "delete_lesson_content_endpoint_api_v1_lesson_contents__content_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "title": "Content Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "deleted_by",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": 0,
+              "title": "Deleted By",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Удалить материал занятия",
+        "tags": [
+          "Lesson contents"
+        ]
+      },
+      "get": {
+        "operationId": "get_lesson_content_endpoint_api_v1_lesson_contents__content_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "title": "Content Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить материал по ID",
+        "tags": [
+          "Lesson contents"
+        ]
+      },
+      "patch": {
+        "operationId": "update_lesson_content_endpoint_api_v1_lesson_contents__content_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "title": "Content Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonContentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить материал занятия",
+        "tags": [
+          "Lesson contents"
+        ]
+      }
+    },
+    "/api/v1/lesson-contents/{content_id}/publish": {
+      "post": {
+        "operationId": "publish_lesson_content_endpoint_api_v1_lesson_contents__content_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "title": "Content Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonContentPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Опубликовать материал для студентов",
+        "tags": [
+          "Lesson contents"
+        ]
+      }
+    },
+    "/api/v1/lesson-contents/{content_id}/unpublish": {
+      "post": {
+        "operationId": "unpublish_lesson_content_endpoint_api_v1_lesson_contents__content_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "content_id",
+            "required": true,
+            "schema": {
+              "title": "Content Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonContentPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonContentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Снять материал с публикации",
+        "tags": [
+          "Lesson contents"
+        ]
+      }
+    },
+    "/api/v1/lesson-links": {
+      "get": {
+        "operationId": "get_lesson_links_endpoint_api_v1_lesson_links_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_content_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Content Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          },
+          {
+            "in": "query",
+            "name": "added_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Added By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список ссылок",
+        "tags": [
+          "Lesson links"
+        ]
+      },
+      "post": {
+        "operationId": "create_lesson_link_endpoint_api_v1_lesson_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Добавить ссылку к материалу занятия",
+        "tags": [
+          "Lesson links"
+        ]
+      }
+    },
+    "/api/v1/lesson-links/content/{lesson_content_id}": {
+      "get": {
+        "operationId": "get_content_links_endpoint_api_v1_lesson_links_content__lesson_content_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_content_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Content Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_visible",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Visible"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить ссылки материала занятия",
+        "tags": [
+          "Lesson links"
+        ]
+      }
+    },
+    "/api/v1/lesson-links/{link_id}": {
+      "delete": {
+        "operationId": "delete_lesson_link_endpoint_api_v1_lesson_links__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ID пользователя, удаляющего ссылку. Позже будет получаться из JWT",
+            "in": "query",
+            "name": "deleted_by",
+            "required": true,
+            "schema": {
+              "description": "ID пользователя, удаляющего ссылку. Позже будет получаться из JWT",
+              "exclusiveMinimum": 0,
+              "title": "Deleted By",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Удалить ссылку",
+        "tags": [
+          "Lesson links"
+        ]
+      },
+      "get": {
+        "operationId": "get_lesson_link_endpoint_api_v1_lesson_links__link_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить ссылку по ID",
+        "tags": [
+          "Lesson links"
+        ]
+      },
+      "patch": {
+        "operationId": "update_lesson_link_endpoint_api_v1_lesson_links__link_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonLinkUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить ссылку",
+        "tags": [
+          "Lesson links"
+        ]
+      }
+    },
+    "/api/v1/lesson-links/{link_id}/hide": {
+      "post": {
+        "operationId": "hide_lesson_link_endpoint_api_v1_lesson_links__link_id__hide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonLinkVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Скрыть ссылку от студентов",
+        "tags": [
+          "Lesson links"
+        ]
+      }
+    },
+    "/api/v1/lesson-links/{link_id}/show": {
+      "post": {
+        "operationId": "show_lesson_link_endpoint_api_v1_lesson_links__link_id__show_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonLinkVisibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Показать ссылку студентам",
+        "tags": [
+          "Lesson links"
+        ]
+      }
+    },
+    "/api/v1/submission-attachments": {
+      "get": {
+        "operationId": "get_submission_attachments_endpoint_api_v1_submission_attachments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "submission_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Submission Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "uploaded_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Uploaded By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить файлы домашних работ",
+        "tags": [
+          "Submission attachments"
+        ]
+      },
+      "post": {
+        "operationId": "create_submission_attachment_endpoint_api_v1_submission_attachments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionAttachmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Добавить файл к домашней работе",
+        "tags": [
+          "Submission attachments"
+        ]
+      }
+    },
+    "/api/v1/submission-attachments/submission/{submission_id}": {
+      "get": {
+        "operationId": "get_attachments_by_submission_endpoint_api_v1_submission_attachments_submission__submission_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить файлы конкретной домашней работы",
+        "tags": [
+          "Submission attachments"
+        ]
+      }
+    },
+    "/api/v1/submission-attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "delete_submission_attachment_endpoint_api_v1_submission_attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ID студента, удаляющего файл. Позже будет получаться из JWT",
+            "in": "query",
+            "name": "deleted_by",
+            "required": true,
+            "schema": {
+              "description": "ID студента, удаляющего файл. Позже будет получаться из JWT",
+              "exclusiveMinimum": 0,
+              "title": "Deleted By",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Удалить файл домашней работы",
+        "tags": [
+          "Submission attachments"
+        ]
+      },
+      "get": {
+        "operationId": "get_submission_attachment_endpoint_api_v1_submission_attachments__attachment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить файл домашней работы по ID",
+        "tags": [
+          "Submission attachments"
+        ]
+      },
+      "patch": {
+        "operationId": "update_submission_attachment_endpoint_api_v1_submission_attachments__attachment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionAttachmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionAttachmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить файл домашней работы",
+        "tags": [
+          "Submission attachments"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

@@ -2,13 +2,7 @@ import os
 
 
 class Settings:
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        (
-            "postgresql+asyncpg://postgres:postgres@"
-            "localhost:5432/notification_db"
-        )
-    )
+    DATABASE_URL: str = os.environ["DATABASE_URL"]
 
     SERVICE_HOST: str = os.getenv(
         "SERVICE_HOST",

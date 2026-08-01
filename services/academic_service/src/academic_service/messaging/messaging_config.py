@@ -8,8 +8,8 @@ class RabbitMQSettings(BaseSettings):
     host: str = "rabbitmq"
     port: int = 5672
 
-    username: str = "guest"
-    password: str = "guest"
+    username: str
+    password: str
 
     virtual_host: str = "/"
 

@@ -1,0 +1,38 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# IDEs and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+*.log
+*.pid
+logs/
+tmp/
+
+# Local database and backup files
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Generated OpenAPI comparison reports
+openapi/diff/

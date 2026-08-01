@@ -1,0 +1,3492 @@
+{
+  "components": {
+    "schemas": {
+      "AttendanceCreate": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Комментарий преподавателя",
+            "title": "Comment"
+          },
+          "late_minutes": {
+            "default": 0,
+            "description": "Количество минут опоздания",
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Late Minutes",
+            "type": "integer"
+          },
+          "lesson_id": {
+            "description": "ID конкретного занятия",
+            "exclusiveMinimum": 0.0,
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "marked_by": {
+            "description": "ID преподавателя или администратора",
+            "exclusiveMinimum": 0.0,
+            "title": "Marked By",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus",
+            "default": "present",
+            "description": "Статус посещаемости"
+          },
+          "student_id": {
+            "description": "ID студента из user-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Student Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lesson_id",
+          "student_id",
+          "marked_by"
+        ],
+        "title": "AttendanceCreate",
+        "type": "object"
+      },
+      "AttendanceListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AttendanceResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "AttendanceListResponse",
+        "type": "object"
+      },
+      "AttendanceResponse": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "late_minutes": {
+            "title": "Late Minutes",
+            "type": "integer"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "marked_by": {
+            "title": "Marked By",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "student_id": {
+            "title": "Student Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_id",
+          "student_id",
+          "status",
+          "late_minutes",
+          "comment",
+          "marked_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AttendanceResponse",
+        "type": "object"
+      },
+      "AttendanceStatus": {
+        "enum": [
+          "present",
+          "remote",
+          "absent",
+          "late",
+          "excused"
+        ],
+        "title": "AttendanceStatus",
+        "type": "string"
+      },
+      "AttendanceUpdate": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "late_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Minutes"
+          },
+          "marked_by": {
+            "description": "ID пользователя, изменившего отметку",
+            "exclusiveMinimum": 0.0,
+            "title": "Marked By",
+            "type": "integer"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttendanceStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "marked_by"
+        ],
+        "title": "AttendanceUpdate",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LessonCancelRequest": {
+        "properties": {
+          "changed_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Changed By",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changed_by",
+          "reason"
+        ],
+        "title": "LessonCancelRequest",
+        "type": "object"
+      },
+      "LessonCompleteRequest": {
+        "properties": {
+          "changed_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Changed By",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "changed_by"
+        ],
+        "title": "LessonCompleteRequest",
+        "type": "object"
+      },
+      "LessonGenerationConflict": {
+        "properties": {
+          "conflict_lesson_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict Lesson Id"
+          },
+          "lesson_date": {
+            "format": "date",
+            "title": "Lesson Date",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lesson_date",
+          "reason"
+        ],
+        "title": "LessonGenerationConflict",
+        "type": "object"
+      },
+      "LessonGenerationRequest": {
+        "properties": {
+          "created_by": {
+            "description": "ID пользователя, запустившего генерацию. Позже будет получаться из JWT",
+            "exclusiveMinimum": 0.0,
+            "title": "Created By",
+            "type": "integer"
+          },
+          "date_from": {
+            "description": "Начальная дата генерации",
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "description": "Конечная дата генерации",
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Общее описание для созданных занятий",
+            "title": "Description"
+          },
+          "skip_conflicts": {
+            "default": true,
+            "description": "Пропускать конфликтующие занятия. Если False — вся операция завершится ошибкой при первом конфликте",
+            "title": "Skip Conflicts",
+            "type": "boolean"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Общая тема для созданных занятий",
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "created_by"
+        ],
+        "title": "LessonGenerationRequest",
+        "type": "object"
+      },
+      "LessonGenerationResponse": {
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/LessonGenerationConflict"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_lesson_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Created Lesson Ids",
+            "type": "array"
+          },
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "template_id",
+          "date_from",
+          "date_to",
+          "created_count",
+          "skipped_count",
+          "created_lesson_ids",
+          "conflicts"
+        ],
+        "title": "LessonGenerationResponse",
+        "type": "object"
+      },
+      "LessonRescheduleRequest": {
+        "properties": {
+          "changed_by": {
+            "exclusiveMinimum": 0.0,
+            "title": "Changed By",
+            "type": "integer"
+          },
+          "end_time": {
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "lesson_date": {
+            "format": "date",
+            "title": "Lesson Date",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "start_time": {
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "teacher_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Id"
+          }
+        },
+        "required": [
+          "lesson_date",
+          "start_time",
+          "end_time",
+          "changed_by",
+          "reason"
+        ],
+        "title": "LessonRescheduleRequest",
+        "type": "object"
+      },
+      "LessonScheduleCreate": {
+        "properties": {
+          "created_by": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID пользователя, создавшего занятие",
+            "title": "Created By"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Описание занятия",
+            "title": "Description"
+          },
+          "end_time": {
+            "description": "Время окончания занятия",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "group_id": {
+            "description": "ID группы из academic-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Group Id",
+            "type": "integer"
+          },
+          "is_extra": {
+            "default": false,
+            "description": "Является ли занятие дополнительным",
+            "title": "Is Extra",
+            "type": "boolean"
+          },
+          "lesson_date": {
+            "description": "Дата занятия",
+            "format": "date",
+            "title": "Lesson Date",
+            "type": "string"
+          },
+          "lesson_type": {
+            "$ref": "#/components/schemas/LessonType",
+            "default": "regular",
+            "description": "Тип занятия"
+          },
+          "room_id": {
+            "description": "ID кабинета из schedule-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Room Id",
+            "type": "integer"
+          },
+          "start_time": {
+            "description": "Время начала занятия",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "teacher_id": {
+            "description": "ID преподавателя из user-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Teacher Id",
+            "type": "integer"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID недельного шаблона",
+            "title": "Template Id"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Тема занятия",
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "group_id",
+          "teacher_id",
+          "room_id",
+          "lesson_date",
+          "start_time",
+          "end_time"
+        ],
+        "title": "LessonScheduleCreate",
+        "type": "object"
+      },
+      "LessonScheduleListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LessonScheduleResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "LessonScheduleListResponse",
+        "type": "object"
+      },
+      "LessonScheduleResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_time": {
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_extra": {
+            "title": "Is Extra",
+            "type": "boolean"
+          },
+          "lesson_date": {
+            "format": "date",
+            "title": "Lesson Date",
+            "type": "string"
+          },
+          "lesson_type": {
+            "$ref": "#/components/schemas/LessonType"
+          },
+          "room_id": {
+            "title": "Room Id",
+            "type": "integer"
+          },
+          "start_time": {
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "teacher_id": {
+            "title": "Teacher Id",
+            "type": "integer"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "teacher_id",
+          "room_id",
+          "template_id",
+          "lesson_date",
+          "start_time",
+          "end_time",
+          "status",
+          "lesson_type",
+          "topic",
+          "description",
+          "is_extra",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LessonScheduleResponse",
+        "type": "object"
+      },
+      "LessonScheduleUpdate": {
+        "properties": {
+          "changed_by": {
+            "description": "ID пользователя, изменившего занятие",
+            "exclusiveMinimum": 0.0,
+            "title": "Changed By",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "is_extra": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Extra"
+          },
+          "lesson_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Date"
+          },
+          "lesson_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Причина изменения",
+            "title": "Reason"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "teacher_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Id"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "changed_by"
+        ],
+        "title": "LessonScheduleUpdate",
+        "type": "object"
+      },
+      "LessonStatus": {
+        "enum": [
+          "scheduled",
+          "completed",
+          "cancelled",
+          "rescheduled"
+        ],
+        "title": "LessonStatus",
+        "type": "string"
+      },
+      "LessonType": {
+        "enum": [
+          "regular",
+          "extra",
+          "replacement",
+          "consultation",
+          "exam"
+        ],
+        "title": "LessonType",
+        "type": "string"
+      },
+      "RoomCreate": {
+        "properties": {
+          "branch_id": {
+            "description": "ID филиала из academic-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Branch Id",
+            "type": "integer"
+          },
+          "capacity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Вместимость кабинета",
+            "title": "Capacity"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Описание кабинета",
+            "title": "Description"
+          },
+          "name": {
+            "description": "Название или номер кабинета",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branch_id",
+          "name"
+        ],
+        "title": "RoomCreate",
+        "type": "object"
+      },
+      "RoomListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoomResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "RoomListResponse",
+        "type": "object"
+      },
+      "RoomResponse": {
+        "properties": {
+          "branch_id": {
+            "description": "ID филиала из academic-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Branch Id",
+            "type": "integer"
+          },
+          "capacity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Вместимость кабинета",
+            "title": "Capacity"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Описание кабинета",
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Название или номер кабинета",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branch_id",
+          "name",
+          "id",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RoomResponse",
+        "type": "object"
+      },
+      "RoomUpdate": {
+        "properties": {
+          "branch_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Id"
+          },
+          "capacity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "RoomUpdate",
+        "type": "object"
+      },
+      "ScheduleChangeListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleChangeResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "ScheduleChangeListResponse",
+        "type": "object"
+      },
+      "ScheduleChangeResponse": {
+        "properties": {
+          "change_type": {
+            "$ref": "#/components/schemas/ScheduleChangeType"
+          },
+          "changed_by": {
+            "title": "Changed By",
+            "type": "integer"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "integer"
+          },
+          "new_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Data"
+          },
+          "old_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Data"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "lesson_id",
+          "change_type",
+          "old_data",
+          "new_data",
+          "reason",
+          "changed_by",
+          "comment",
+          "created_at"
+        ],
+        "title": "ScheduleChangeResponse",
+        "type": "object"
+      },
+      "ScheduleChangeType": {
+        "enum": [
+          "rescheduled",
+          "cancelled",
+          "teacher_changed",
+          "room_changed",
+          "updated",
+          "restored"
+        ],
+        "title": "ScheduleChangeType",
+        "type": "string"
+      },
+      "ScheduleTemplateCreate": {
+        "properties": {
+          "end_time": {
+            "description": "Время окончания занятия",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "group_id": {
+            "description": "ID группы из academic-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Group Id",
+            "type": "integer"
+          },
+          "lesson_type": {
+            "$ref": "#/components/schemas/LessonType",
+            "default": "regular",
+            "description": "Тип занятия"
+          },
+          "room_id": {
+            "description": "ID кабинета из schedule-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Room Id",
+            "type": "integer"
+          },
+          "start_time": {
+            "description": "Время начала занятия",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "teacher_id": {
+            "description": "ID преподавателя из user-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Teacher Id",
+            "type": "integer"
+          },
+          "weekday": {
+            "description": "День недели: 0 — понедельник, 1 — вторник, 2 — среда, 3 — четверг, 4 — пятница, 5 — суббота, 6 — воскресенье",
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Weekday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "group_id",
+          "teacher_id",
+          "room_id",
+          "weekday",
+          "start_time",
+          "end_time"
+        ],
+        "title": "ScheduleTemplateCreate",
+        "type": "object"
+      },
+      "ScheduleTemplateListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleTemplateResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "ScheduleTemplateListResponse",
+        "type": "object"
+      },
+      "ScheduleTemplateResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "end_time": {
+            "description": "Время окончания занятия",
+            "format": "time",
+            "title": "End Time",
+            "type": "string"
+          },
+          "group_id": {
+            "description": "ID группы из academic-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Group Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "lesson_type": {
+            "$ref": "#/components/schemas/LessonType",
+            "default": "regular",
+            "description": "Тип занятия"
+          },
+          "room_id": {
+            "description": "ID кабинета из schedule-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Room Id",
+            "type": "integer"
+          },
+          "start_time": {
+            "description": "Время начала занятия",
+            "format": "time",
+            "title": "Start Time",
+            "type": "string"
+          },
+          "teacher_id": {
+            "description": "ID преподавателя из user-service",
+            "exclusiveMinimum": 0.0,
+            "title": "Teacher Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "weekday": {
+            "description": "День недели: 0 — понедельник, 1 — вторник, 2 — среда, 3 — четверг, 4 — пятница, 5 — суббота, 6 — воскресенье",
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Weekday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "group_id",
+          "teacher_id",
+          "room_id",
+          "weekday",
+          "start_time",
+          "end_time",
+          "id",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScheduleTemplateResponse",
+        "type": "object"
+      },
+      "ScheduleTemplateUpdate": {
+        "properties": {
+          "end_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Id"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "lesson_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "teacher_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Id"
+          },
+          "weekday": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekday"
+          }
+        },
+        "title": "ScheduleTemplateUpdate",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "\nSchedule Service микросервиса платформы ВШП Студент.\n\nОтвечает за:\n- кабинеты;\n- недельные шаблоны расписания;\n- конкретные занятия;\n- автоматическую генерацию занятий;\n- дополнительные занятия;\n- переносы;\n- отмены;\n- замены преподавателей;\n- историю изменений;\n- проверку конфликтов расписания.\n\nПользователи и преподаватели получаются из user-service.\nГруппы и филиалы получаются из academic-service.\n",
+    "title": "Schedule Service",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root"
+      }
+    },
+    "/api/v1/attendance": {
+      "get": {
+        "operationId": "get_attendance_endpoint_api_v1_attendance_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "student_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AttendanceStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "marked_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marked By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список посещаемости",
+        "tags": [
+          "Attendance"
+        ]
+      },
+      "post": {
+        "operationId": "create_attendance_endpoint_api_v1_attendance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать отметку посещаемости",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/lesson/{lesson_id}": {
+      "get": {
+        "operationId": "get_lesson_attendance_endpoint_api_v1_attendance_lesson__lesson_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить посещаемость занятия",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/student/{student_id}": {
+      "get": {
+        "operationId": "get_student_attendance_endpoint_api_v1_attendance_student__student_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "student_id",
+            "required": true,
+            "schema": {
+              "title": "Student Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить посещаемость студента",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/attendance/{attendance_id}": {
+      "get": {
+        "operationId": "get_attendance_by_id_endpoint_api_v1_attendance__attendance_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attendance_id",
+            "required": true,
+            "schema": {
+              "title": "Attendance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить отметку посещаемости",
+        "tags": [
+          "Attendance"
+        ]
+      },
+      "patch": {
+        "operationId": "update_attendance_endpoint_api_v1_attendance__attendance_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attendance_id",
+            "required": true,
+            "schema": {
+              "title": "Attendance Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить отметку посещаемости",
+        "tags": [
+          "Attendance"
+        ]
+      }
+    },
+    "/api/v1/lessons": {
+      "get": {
+        "operationId": "get_lessons_endpoint_api_v1_lessons_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "teacher_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Teacher Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "room_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Room Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/LessonStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_extra",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Extra"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список занятий",
+        "tags": [
+          "Lessons"
+        ]
+      },
+      "post": {
+        "operationId": "create_lesson_endpoint_api_v1_lessons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonScheduleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать конкретное занятие",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/group/{group_id}": {
+      "get": {
+        "operationId": "get_group_lessons_endpoint_api_v1_lessons_group__group_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить занятия группы",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/teacher/{teacher_id}": {
+      "get": {
+        "operationId": "get_teacher_lessons_endpoint_api_v1_lessons_teacher__teacher_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "teacher_id",
+            "required": true,
+            "schema": {
+              "title": "Teacher Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lesson_date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить занятия преподавателя",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/{lesson_id}": {
+      "get": {
+        "operationId": "get_lesson_endpoint_api_v1_lessons__lesson_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить занятие по ID",
+        "tags": [
+          "Lessons"
+        ]
+      },
+      "patch": {
+        "operationId": "update_lesson_endpoint_api_v1_lessons__lesson_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonScheduleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить занятие",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/{lesson_id}/cancel": {
+      "post": {
+        "operationId": "cancel_lesson_endpoint_api_v1_lessons__lesson_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Отменить занятие",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/{lesson_id}/complete": {
+      "post": {
+        "operationId": "complete_lesson_endpoint_api_v1_lessons__lesson_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonCompleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Отметить занятие завершённым",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/lessons/{lesson_id}/reschedule": {
+      "post": {
+        "operationId": "reschedule_lesson_endpoint_api_v1_lessons__lesson_id__reschedule_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonRescheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Перенести занятие",
+        "tags": [
+          "Lessons"
+        ]
+      }
+    },
+    "/api/v1/rooms": {
+      "get": {
+        "operationId": "get_rooms_endpoint_api_v1_rooms_get",
+        "parameters": [
+          {
+            "description": "Фильтр по ID филиала",
+            "in": "query",
+            "name": "branch_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Фильтр по ID филиала",
+              "title": "Branch Id"
+            }
+          },
+          {
+            "description": "Фильтр по активности кабинета",
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Фильтр по активности кабинета",
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список кабинетов",
+        "tags": [
+          "Rooms"
+        ]
+      },
+      "post": {
+        "operationId": "create_room_endpoint_api_v1_rooms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать кабинет",
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
+    "/api/v1/rooms/{room_id}": {
+      "get": {
+        "operationId": "get_room_endpoint_api_v1_rooms__room_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить кабинет по ID",
+        "tags": [
+          "Rooms"
+        ]
+      },
+      "patch": {
+        "operationId": "update_room_endpoint_api_v1_rooms__room_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить кабинет",
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
+    "/api/v1/rooms/{room_id}/activate": {
+      "post": {
+        "operationId": "activate_room_endpoint_api_v1_rooms__room_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Активировать кабинет",
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
+    "/api/v1/rooms/{room_id}/deactivate": {
+      "post": {
+        "operationId": "deactivate_room_endpoint_api_v1_rooms__room_id__deactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_id",
+            "required": true,
+            "schema": {
+              "title": "Room Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Деактивировать кабинет",
+        "tags": [
+          "Rooms"
+        ]
+      }
+    },
+    "/api/v1/schedule-changes": {
+      "get": {
+        "operationId": "get_schedule_changes_endpoint_api_v1_schedule_changes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lesson_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "changed_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Changed By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "change_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ScheduleChangeType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Change Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleChangeListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить историю изменений расписания",
+        "tags": [
+          "Schedule changes"
+        ]
+      }
+    },
+    "/api/v1/schedule-changes/lesson/{lesson_id}": {
+      "get": {
+        "operationId": "get_lesson_schedule_changes_endpoint_api_v1_schedule_changes_lesson__lesson_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "title": "Lesson Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleChangeListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить историю конкретного занятия",
+        "tags": [
+          "Schedule changes"
+        ]
+      }
+    },
+    "/api/v1/schedule-changes/{change_id}": {
+      "get": {
+        "operationId": "get_schedule_change_endpoint_api_v1_schedule_changes__change_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleChangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить запись об изменении по ID",
+        "tags": [
+          "Schedule changes"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates": {
+      "get": {
+        "operationId": "get_schedule_templates_endpoint_api_v1_schedule_templates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "group_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "teacher_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Teacher Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "room_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Room Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weekday",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 6,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Weekday"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить список шаблонов расписания",
+        "tags": [
+          "Schedule templates"
+        ]
+      },
+      "post": {
+        "operationId": "create_schedule_template_endpoint_api_v1_schedule_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleTemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Создать недельный шаблон расписания",
+        "tags": [
+          "Schedule templates"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates/group/{group_id}": {
+      "get": {
+        "operationId": "get_group_schedule_templates_endpoint_api_v1_schedule_templates_group__group_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": true,
+              "title": "Is Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить расписание группы",
+        "tags": [
+          "Schedule templates"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates/{template_id}": {
+      "get": {
+        "operationId": "get_schedule_template_endpoint_api_v1_schedule_templates__template_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Получить шаблон расписания по ID",
+        "tags": [
+          "Schedule templates"
+        ]
+      },
+      "patch": {
+        "operationId": "update_schedule_template_endpoint_api_v1_schedule_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleTemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Изменить шаблон расписания",
+        "tags": [
+          "Schedule templates"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates/{template_id}/activate": {
+      "post": {
+        "operationId": "activate_schedule_template_endpoint_api_v1_schedule_templates__template_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Активировать шаблон расписания",
+        "tags": [
+          "Schedule templates"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates/{template_id}/deactivate": {
+      "post": {
+        "operationId": "deactivate_schedule_template_endpoint_api_v1_schedule_templates__template_id__deactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Деактивировать шаблон расписания",
+        "tags": [
+          "Schedule templates"
+        ]
+      }
+    },
+    "/api/v1/schedule-templates/{template_id}/generate-lessons": {
+      "post": {
+        "operationId": "generate_lessons_endpoint_api_v1_schedule_templates__template_id__generate_lessons_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonGenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonGenerationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Сформировать занятия по недельному шаблону",
+        "tags": [
+          "Lesson generation"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}
