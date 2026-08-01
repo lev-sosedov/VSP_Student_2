@@ -5,10 +5,7 @@ from pydantic_settings import (
 
 
 class Settings(BaseSettings):
-    database_url: str = (
-        "postgresql+asyncpg://"
-        "postgres:postgres@postgres:5432/news_db"
-    )
+    database_url: str
 
     service_host: str = "0.0.0.0"
     service_port: int = 8007

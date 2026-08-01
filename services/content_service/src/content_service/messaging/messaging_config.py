@@ -14,15 +14,9 @@ class RabbitMQSettings:
         )
     )
 
-    username: str = os.getenv(
-        "RABBITMQ_USERNAME",
-        "guest"
-    )
+    username: str = os.environ["RABBITMQ_USERNAME"]
 
-    password: str = os.getenv(
-        "RABBITMQ_PASSWORD",
-        "guest"
-    )
+    password: str = os.environ["RABBITMQ_PASSWORD"]
 
     virtual_host: str = os.getenv(
         "RABBITMQ_VIRTUAL_HOST",

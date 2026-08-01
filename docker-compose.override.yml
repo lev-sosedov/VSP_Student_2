@@ -1,0 +1,40 @@
+# Development-only override. Docker Compose loads this file automatically.
+# Every published port is bound to localhost and is not reachable externally.
+services:
+  api-gateway:
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+  auth-service:
+    ports:
+      - "127.0.0.1:${AUTH_SERVICE_PORT:-8000}:8000"
+  user-service:
+    ports:
+      - "127.0.0.1:${USER_SERVICE_PORT:-8001}:8001"
+  academic-service:
+    ports:
+      - "127.0.0.1:${ACADEMIC_SERVICE_PORT:-8002}:8002"
+  schedule-service:
+    ports:
+      - "127.0.0.1:${SCHEDULE_SERVICE_PORT:-8003}:8003"
+  content-service:
+    ports:
+      - "127.0.0.1:${CONTENT_SERVICE_PORT:-8004}:8004"
+  notification-service:
+    ports:
+      - "127.0.0.1:${NOTIFICATION_SERVICE_PORT:-8005}:8005"
+  communication-service:
+    ports:
+      - "127.0.0.1:${COMMUNICATION_SERVICE_PORT:-8006}:8006"
+  news-service:
+    ports:
+      - "127.0.0.1:${NEWS_SERVICE_PORT:-8007}:8007"
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_DEV_PORT:-5433}:5432"
+  rabbitmq:
+    ports:
+      - "127.0.0.1:${RABBITMQ_AMQP_DEV_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_DEV_PORT:-15672}:15672"
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_DEV_PORT:-6379}:6379"
