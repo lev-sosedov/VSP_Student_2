@@ -1,5 +1,3 @@
-name: ${COMPOSE_PROJECT_NAME:-vsp-student}
-
 x-app-defaults: &app-defaults
   restart: unless-stopped
   networks:

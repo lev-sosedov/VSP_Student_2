@@ -19,6 +19,10 @@
 привязаны к `127.0.0.1`, поэтому Swagger и инфраструктура доступны только
 на локальном компьютере.
 
+> **Важно:** при переходе на новую конфигурацию нельзя менять Docker Compose project name.
+> Иначе Docker подключит новые пустые volumes вместо существующих `postgres_data` и
+> `rabbitmq_data`.
+
 ## Production
 
 Production запускается без development override:
