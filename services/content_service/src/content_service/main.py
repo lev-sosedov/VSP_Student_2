@@ -265,13 +265,11 @@ app.include_router(
 
 app.include_router(
     homework_submission_router,
-    prefix=API_PREFIX,
-    dependencies=[Depends(require_content_mutation)]
+    prefix=API_PREFIX
 )
 app.include_router(
     submission_attachment_router,
-    prefix=API_PREFIX,
-    dependencies=[Depends(require_content_mutation)]
+    prefix=API_PREFIX
 )
 
 # =====================================================

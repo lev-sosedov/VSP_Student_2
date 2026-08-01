@@ -40,10 +40,11 @@ async def test_teacher_allowed_schedule_and_content_mutations():
 
 
 @pytest.mark.asyncio
-async def test_student_cannot_publish_content_but_can_reach_submission_policy():
+async def test_student_cannot_publish_or_use_generic_content_mutation_policy():
     with pytest.raises(HTTPException):
         await require_content_mutation(request("POST", "/api/v1/homeworks/1/publish"), principal(RoleType.STUDENT))
-    assert (await require_content_mutation(request("POST", "/api/v1/submissions"), principal(RoleType.STUDENT))).role is RoleType.STUDENT
+    with pytest.raises(HTTPException):
+        await require_content_mutation(request("POST", "/api/v1/submissions"), principal(RoleType.STUDENT))
 
 
 @pytest.mark.asyncio

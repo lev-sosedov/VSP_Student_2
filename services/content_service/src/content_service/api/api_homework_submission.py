@@ -36,6 +36,16 @@ router = APIRouter(
 )
 
 
+def _ensure_owner_or_admin(principal: CurrentPrincipal, student_id: int) -> None:
+    if principal.role is not RoleType.ADMIN and principal.user_id != student_id:
+        raise HTTPException(status_code=403, detail="Submission ownership required")
+
+
+def _ensure_teacher_or_admin(principal: CurrentPrincipal) -> None:
+    if principal.role not in {RoleType.TEACHER, RoleType.ADMIN}:
+        raise HTTPException(status_code=403, detail="Teacher or administrator role required")
+
+
 # =====================================================
 # Создать черновик работы
 # =====================================================
@@ -251,6 +261,7 @@ async def get_homework_submission_endpoint(
 async def update_homework_submission_endpoint(
     submission_id: int,
     submission_data: HomeworkSubmissionUpdate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = HomeworkSubmissionService(
@@ -266,6 +277,7 @@ async def update_homework_submission_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Домашняя работа не найдена"
         )
+    _ensure_owner_or_admin(principal, submission.student_id)
 
     try:
         return await service.update(
@@ -292,6 +304,7 @@ async def update_homework_submission_endpoint(
 async def submit_homework_submission_endpoint(
     submission_id: int,
     submit_data: HomeworkSubmissionSubmitRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
     service = HomeworkSubmissionService(
@@ -307,6 +320,8 @@ async def submit_homework_submission_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Домашняя работа не найдена"
         )
+    _ensure_owner_or_admin(principal, submission.student_id)
+    _ensure_owner_or_admin(principal, submit_data.student_id)
 
     try:
         return await service.submit(
@@ -333,8 +348,10 @@ async def submit_homework_submission_endpoint(
 async def start_review_endpoint(
     submission_id: int,
     review_data: HomeworkSubmissionReviewRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    _ensure_teacher_or_admin(principal)
     service = HomeworkSubmissionService(
         session=session
     )
@@ -374,8 +391,10 @@ async def start_review_endpoint(
 async def request_revision_endpoint(
     submission_id: int,
     revision_data: HomeworkSubmissionRevisionRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    _ensure_teacher_or_admin(principal)
     service = HomeworkSubmissionService(
         session=session
     )
@@ -418,8 +437,10 @@ async def request_revision_endpoint(
 async def accept_submission_endpoint(
     submission_id: int,
     accept_data: HomeworkSubmissionAcceptRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    _ensure_teacher_or_admin(principal)
     service = HomeworkSubmissionService(
         session=session
     )
@@ -459,8 +480,10 @@ async def accept_submission_endpoint(
 async def reject_submission_endpoint(
     submission_id: int,
     reject_data: HomeworkSubmissionRejectRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    _ensure_teacher_or_admin(principal)
     service = HomeworkSubmissionService(
         session=session
     )

@@ -39,15 +39,11 @@ async def require_content_mutation(
     request: Request,
     principal: CurrentPrincipal | None = Depends(get_optional_principal),
 ) -> CurrentPrincipal:
-    """Content writes are teacher/admin, except student-owned submissions."""
+    """Content writes are restricted to teacher/admin roles."""
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return principal  # type: ignore[return-value]
     if principal is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-    if "/submissions" in request.url.path and principal.role in {
-        RoleType.STUDENT, RoleType.ADMIN
-    }:
-        return principal
     if principal.role not in {RoleType.TEACHER, RoleType.ADMIN}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

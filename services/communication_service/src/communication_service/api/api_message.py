@@ -24,11 +24,13 @@ from communication_service.schemas.schemas_message import (
 from communication_service.services.service_message import (
     MessageService
 )
+from communication_service.api.dependencies import require_chat_member
 
 
 router = APIRouter(
     prefix="/messages",
-    tags=["Messages"]
+    tags=["Messages"],
+    dependencies=[Depends(require_chat_member)]
 )
 
 
@@ -47,7 +49,7 @@ async def create_message_endpoint(
     principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
-    if principal.role is not RoleType.ADMIN and message_data.sender_id != principal.user_id:
+    if message_data.sender_id != principal.user_id:
         raise HTTPException(status_code=403, detail="Cannot send as another user")
     service = MessageService(
         session=session
