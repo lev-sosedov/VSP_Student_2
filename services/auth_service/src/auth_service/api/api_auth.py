@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth_service.core.core_deps import get_current_user
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
 from auth_service.schemas.schemas_auth import (
     RegisterRequest,
     LoginRequest,
@@ -62,7 +63,7 @@ async def register(
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(error)
+            detail="Internal server error"
         ) from error
 
 
@@ -108,7 +109,7 @@ async def login(
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(error)
+            detail="Internal server error"
         ) from error
 
 
@@ -136,14 +137,14 @@ async def login(
 )
 async def change_password(
     data: ChangePasswordRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: CurrentPrincipal = Depends(get_current_principal),
     db: AsyncSession = Depends(get_db)
 ):
     service = AuthService(db)
 
     try:
         return await service.change_password(
-            user_id=current_user["user_id"],
+            user_id=int(current_user.claims["auth_user_id"]),
             data=data
         )
 
@@ -153,7 +154,7 @@ async def change_password(
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(error)
+            detail="Internal server error"
         ) from error
 
 
@@ -192,7 +193,7 @@ async def refresh(
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(error)
+            detail="Internal server error"
         ) from error
 
 
@@ -215,7 +216,7 @@ async def refresh(
         }
     }
 )
-async def logout():
+async def logout(_principal: CurrentPrincipal = Depends(get_current_principal)):
     return {
         "message": "logout endpoint"
     }
@@ -223,6 +224,6 @@ async def logout():
 
 @router.get("/me")
 async def me(
-    user=Depends(get_current_user)
+    user: CurrentPrincipal = Depends(get_current_principal)
 ):
-    return user
+    return {"user_id": user.user_id, "role": user.role.value}

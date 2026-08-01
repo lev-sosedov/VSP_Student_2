@@ -11,6 +11,11 @@ REQUEST_HEADERS_TO_REMOVE = {
     "host",
     "content-length",
     "connection",
+    "x-user-id",
+    "x-auth-user-id",
+    "x-role",
+    "x-user-role",
+    "x-authenticated-user",
 }
 
 RESPONSE_HEADERS_TO_REMOVE = {

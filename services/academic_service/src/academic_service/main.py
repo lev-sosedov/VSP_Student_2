@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from academic_service.api.api_branch import (
     router as branch_router
@@ -265,6 +266,8 @@ Academic Service микросервиса платформы ВШП Студен
 # =====================================================
 # ROUTES
 # =====================================================
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     module_router,

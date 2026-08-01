@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from content_service.api.api_lesson_content import (
     router as lesson_content_router
@@ -228,6 +229,8 @@ Content Service микросервиса платформы ВШП Студен�
 # =====================================================
 # ROUTES
 # =====================================================
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     lesson_content_router,

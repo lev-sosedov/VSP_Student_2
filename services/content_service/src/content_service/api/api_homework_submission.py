@@ -6,6 +6,9 @@ from fastapi import (
     status
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from common.utils.enum_homework_submission_status import (
     HomeworkSubmissionStatus
@@ -45,8 +48,11 @@ router = APIRouter(
 )
 async def create_homework_submission_endpoint(
     submission_data: HomeworkSubmissionCreate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role is not RoleType.ADMIN and submission_data.student_id != principal.user_id:
+        raise HTTPException(status_code=403, detail="Cannot submit as another student")
     service = HomeworkSubmissionService(
         session=session
     )

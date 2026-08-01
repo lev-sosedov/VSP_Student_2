@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from schedule_service.api.api_lesson_generation import (
     router as lesson_generation_router
@@ -249,6 +250,8 @@ Schedule Service микросервиса платформы ВШП Студен
 # =====================================================
 # ROUTES
 # =====================================================
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     room_router,

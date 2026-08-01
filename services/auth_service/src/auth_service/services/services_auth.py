@@ -3,9 +3,8 @@ from fastapi import HTTPException, status
 from auth_service.core.core_security import (
     hash_password,
     verify_password,
-    create_access_token,
-    create_refresh_token,
-    decode_token
+    get_issuer,
+    get_verifier,
 )
 from auth_service.schemas.schemas_auth import (
     RegisterRequest,
@@ -15,12 +14,17 @@ from auth_service.schemas.schemas_auth import (
 )
 from auth_service.repositories.repository_auth import AuthRepository
 from auth_service.messaging.messaging_rabbit import publish_user_created
+from auth_service.messaging.messaging_rpc_client import user_identity_rpc_client
+from auth_service.services.identity_resolver import IdentityResolver
+from common.identity import IdentityResolutionError
+from common.security.exceptions import SecurityError
 
 
 class AuthService:
 
-    def __init__(self, db):
+    def __init__(self, db, identity_resolver=None):
         self.repo = AuthRepository(db)
+        self.identity_resolver = identity_resolver or IdentityResolver(user_identity_rpc_client)
 
     async def register(self, data: RegisterRequest):
         existing = await self.repo.get_user_by_phone(
@@ -83,36 +87,27 @@ class AuthService:
                 detail="Invalid credentials"
             )
 
-        payload = {
-            "user_id": user.id,
-            "role": user.role
-        }
-
-        return {
-            "access_token": create_access_token(payload),
-            "refresh_token": create_refresh_token(payload),
-            "token_type": "bearer"
-        }
+        try:
+            identity = await self.identity_resolver.resolve(user)
+        except IdentityResolutionError as exc:
+            raise HTTPException(status_code=401, detail=exc.public_message) from exc
+        return get_issuer().create_pair(identity)
 
     async def refresh(self, data: RefreshRequest):
-        payload = decode_token(data.refresh_token)
-
-        if payload.get("type") != "refresh":
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid refresh token"
-            )
-
-        new_payload = {
-            "user_id": payload["user_id"],
-            "role": payload["role"]
-        }
-
-        return {
-            "access_token": create_access_token(new_payload),
-            "refresh_token": create_refresh_token(new_payload),
-            "token_type": "bearer"
-        }
+        try:
+            payload = get_verifier().verify_refresh_token(data.refresh_token)
+        except SecurityError as exc:
+            raise HTTPException(status_code=401, detail=exc.public_message) from exc
+        auth_user = await self.repo.get_user_by_id(int(payload["auth_user_id"]))
+        if auth_user is None or auth_user.token_version != int(payload["token_version"]):
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+        try:
+            identity = await self.identity_resolver.resolve(auth_user)
+        except IdentityResolutionError as exc:
+            raise HTTPException(status_code=401, detail=exc.public_message) from exc
+        if identity.user_id != int(payload["sub"]):
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+        return get_issuer().create_pair(identity)
 
     async def change_password(
         self,
@@ -160,6 +155,7 @@ class AuthService:
                 data.new_password
             )
         )
+        await self.repo.increment_token_version(user.id)
 
         return {
             "message": "Пароль успешно изменён"

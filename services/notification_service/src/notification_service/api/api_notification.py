@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.utils.enum_notification_type import (
     NotificationType
 )
+from common.security.permissions import require_self_or_admin
 from notification_service.db.db_session import (
     get_session
 )
@@ -199,6 +200,7 @@ async def create_notification_endpoint(
 )
 async def get_user_notifications_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     only_unread: bool | None = Query(
         default=None
     ),
@@ -251,6 +253,7 @@ async def get_user_notifications_endpoint(
 )
 async def get_unread_count_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -278,6 +281,7 @@ async def get_unread_count_endpoint(
 )
 async def mark_all_notifications_as_read_endpoint(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(
@@ -306,6 +310,7 @@ async def mark_all_notifications_as_read_endpoint(
 async def get_user_notification_endpoint(
     notification_id: int,
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = NotificationService(

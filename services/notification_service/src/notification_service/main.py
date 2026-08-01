@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from notification_service.db import db_init_models
 from notification_service.db.db_base import Base
@@ -208,6 +209,8 @@ Notification Service микросервиса платформы ВШП Студ
 # =====================================================
 # ROUTES
 # =====================================================
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     notification_preference_router,

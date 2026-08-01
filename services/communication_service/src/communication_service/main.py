@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI
+from common.security.middleware import JWTAuthenticationMiddleware
 
 from communication_service.db import db_init_models
 from communication_service.db.db_base import Base
@@ -271,6 +272,8 @@ Communication Service микросервиса платформы ВШП Сту�
 # ROUTES
 # =====================================================
 
+
+app.add_middleware(JWTAuthenticationMiddleware)
 
 app.include_router(
     chat_router,

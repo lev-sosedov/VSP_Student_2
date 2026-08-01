@@ -68,9 +68,13 @@ PostgreSQL, RabbitMQ, Redis и порты `8000-8007` не должны публ
 - `CONTENT_DB_NAME`, `COMMUNICATION_DB_NAME`, `NOTIFICATION_DB_NAME`, `NEWS_DB_NAME`
 - `RABBITMQ_PASSWORD`
 - `REDIS_PASSWORD`
-- `JWT_SECRET_KEY`
+- `JWT_PRIVATE_KEY_HOST_PATH` (auth-service only)
+- `JWT_PUBLIC_KEY_HOST_PATH` (verifying HTTP services)
+- `JWT_ALGORITHM=RS256`, `JWT_ISSUER`, `JWT_AUDIENCE`
 - `CORS_ORIGINS=https://vsp-student.ru`
 - SMTP-параметры, если включена отправка email
 
-На следующем этапе общий симметричный `JWT_SECRET_KEY` будет заменён на
-асимметричную пару ключей.
+Приватный RSA-ключ никогда не попадает в Git или образы проверяющих сервисов.
+Сгенерируйте локальную пару вне репозитория скриптом
+`scripts/generate_jwt_keys.ps1` и задайте пути через `.env`. После перехода на
+RS256 HS256 больше не поддерживается.

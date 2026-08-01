@@ -6,6 +6,9 @@ from fastapi import (
     status
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from communication_service.db.db_session import (
     get_session
@@ -41,8 +44,11 @@ router = APIRouter(
 )
 async def create_message_endpoint(
     message_data: MessageCreate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role is not RoleType.ADMIN and message_data.sender_id != principal.user_id:
+        raise HTTPException(status_code=403, detail="Cannot send as another user")
     service = MessageService(
         session=session
     )

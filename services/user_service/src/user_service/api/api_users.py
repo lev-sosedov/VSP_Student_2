@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.permissions import require_admin, require_self_or_admin
 
 from user_service.db.db_session import get_db
 from user_service.services.service_user import UserService
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 )
 async def create_user(
     data: UserCreate,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -70,6 +72,7 @@ async def get_user_by_phone(
         min_length=10,
         max_length=20
     ),
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -95,6 +98,7 @@ async def get_user_by_phone(
 async def get_users(
     limit: int = 20,
     offset: int = 0,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -113,6 +117,7 @@ async def get_users(
 )
 async def get_user(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -136,6 +141,7 @@ async def get_user(
 async def update_user(
     user_id: int,
     data: UserUpdate,
+    _principal=Depends(require_self_or_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -160,6 +166,7 @@ async def update_user(
 async def change_role(
     user_id: int,
     data: UserRoleUpdate,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -183,6 +190,7 @@ async def change_role(
 )
 async def block_user(
     user_id: int,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -205,6 +213,7 @@ async def block_user(
 )
 async def activate_user(
     user_id: int,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -228,6 +237,7 @@ async def activate_user(
 )
 async def verify_account(
     user_id: int,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -251,6 +261,7 @@ async def verify_account(
 )
 async def verify_phone(
     user_id: int,
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
@@ -273,6 +284,7 @@ async def verify_phone(
 )
 async def delete_user(
     user_id: int,
+    _principal=Depends(require_self_or_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)
