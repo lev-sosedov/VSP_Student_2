@@ -4,6 +4,10 @@
 .vscode
 .env
 **/.env
+*.pem
+*.key
+secrets/
+**/secrets/
 **/__pycache__
 **/*.py[cod]
 **/.pytest_cache

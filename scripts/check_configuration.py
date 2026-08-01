@@ -8,6 +8,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TRACKED_ENV_PATTERN = re.compile(r"(^|/)\.env(?:\..+)?$")
 SAFE_EXAMPLE_PATTERN = re.compile(r"(^|/)\.env\.example$")
+SENSITIVE_KEY_FILE_PATTERN = re.compile(
+    r"(^|/)(?:secrets?/.*|[^/]+\.(?:pem|key))$",
+    re.IGNORECASE,
+)
+DATABASE_BACKUP_PATTERN = re.compile(
+    r"(^|/).*database[_-]backup.*\.sql$",
+    re.IGNORECASE,
+)
+KEY_MATERIAL_PATTERN = re.compile(
+    r"-----BEGIN (?:RSA )?(?:PRIVATE|PUBLIC) KEY-----"
+)
 FORBIDDEN_LITERAL_PATTERNS = {
     "hardcoded PostgreSQL password": re.compile(
         r"POSTGRES_PASSWORD\s*:\s*(?:postgres|admin|password)\s*$",
@@ -40,6 +51,10 @@ def main() -> int:
             file_name
         ):
             errors.append(f"tracked secret file: {file_name}")
+        if SENSITIVE_KEY_FILE_PATTERN.search(file_name):
+            errors.append(f"tracked key material file: {file_name}")
+        if DATABASE_BACKUP_PATTERN.search(file_name):
+            errors.append(f"tracked database backup: {file_name}")
 
     inspected = [
         ROOT / "docker-compose.yml",
@@ -52,6 +67,17 @@ def main() -> int:
         for label, pattern in FORBIDDEN_LITERAL_PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"{label}: {path.relative_to(ROOT)}")
+
+    for file_name in files:
+        path = ROOT / file_name
+        if path.suffix.lower() not in {".py", ".md", ".yml", ".yaml", ".toml", ".txt"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if KEY_MATERIAL_PATTERN.search(text):
+            errors.append(f"embedded key material: {file_name}")
 
     if errors:
         print("Configuration check failed:")
