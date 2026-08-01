@@ -10,8 +10,11 @@ Generate local keys outside the repository:
 powershell -ExecutionPolicy Bypass -File scripts/generate_jwt_keys.ps1
 ```
 
-The default files are created beside the repository. Set
-`JWT_PRIVATE_KEY_HOST_PATH` and `JWT_PUBLIC_KEY_HOST_PATH` when using other
+The default files are created in the parent directory beside the repository:
+`../VSP_Student_2_jwt_private_key.pem` and
+`../VSP_Student_2_jwt_public_key.pem`. These are the same paths used by the
+Compose defaults for `JWT_PRIVATE_KEY_HOST_PATH` and
+`JWT_PUBLIC_KEY_HOST_PATH`. Set those variables only when using other external
 locations. Only auth-service mounts the private key; every verifier mounts only
 the public key. Never copy either key into an image or commit it.
 
