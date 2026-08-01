@@ -4,6 +4,8 @@ from fastapi import (
     WebSocketDisconnect,
     status
 )
+from common.security.dependencies import get_jwt_provider
+from common.security.exceptions import AuthenticationError
 
 from communication_service.db.db_session import (
     AsyncSessionLocal
@@ -84,6 +86,22 @@ async def chat_websocket_endpoint(
     chat_id: int,
     user_id: int
 ):
+    authorization = websocket.headers.get("authorization")
+    token = websocket.query_params.get("token")
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    if not token:
+        await websocket.close(code=4401, reason="Authentication required")
+        return
+    try:
+        principal = get_jwt_provider().verify_access_token(token)
+    except AuthenticationError:
+        await websocket.close(code=4401, reason="Invalid authentication token")
+        return
+    if principal.user_id != user_id:
+        await websocket.close(code=4403, reason="User identity mismatch")
+        return
+
     has_access, error_message = (
         await validate_websocket_access(
             chat_id=chat_id,
@@ -93,7 +111,7 @@ async def chat_websocket_endpoint(
 
     if not has_access:
         await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION,
+            code=4403,
             reason=error_message
         )
 

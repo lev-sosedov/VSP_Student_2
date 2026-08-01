@@ -15,6 +15,8 @@ from common.utils.enum_notification_type import (
     NotificationType
 )
 from common.security.permissions import require_self_or_admin
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
 from notification_service.db.db_session import (
     get_session
 )
@@ -343,8 +345,11 @@ async def get_user_notification_endpoint(
 async def mark_notification_as_read_endpoint(
     notification_id: int,
     read_data: NotificationReadRequest,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role.value != "admin" and read_data.user_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     service = NotificationService(
         session=session
     )

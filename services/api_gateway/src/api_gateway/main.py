@@ -35,6 +35,9 @@ app = FastAPI(
     description="Единая точка входа для платформы ВШП Студент",
     version="1.0.0",
     debug=settings.DEBUG,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan,
 )
 
