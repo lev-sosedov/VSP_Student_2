@@ -260,4 +260,4 @@ async def health():
 
 @app.get("/ready")
 async def ready():
-    return await database_readiness(engine, ("notifications",), {"rabbitmq": notification_event_consumer.started})
+    return await database_readiness(engine, ("notifications",), {"rabbitmq": "probe-rabbitmq", "consumer": notification_event_consumer.started})

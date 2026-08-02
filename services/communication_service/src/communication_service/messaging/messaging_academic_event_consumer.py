@@ -13,6 +13,8 @@ from communication_service.messaging.messaging_rabbit import (
     RabbitConnection
 )
 from communication_service.services.service_chat import ChatService
+from communication_service.models.model_processed_event import ProcessedEvent
+from sqlalchemy import select
 
 
 class AcademicEventConsumer:
@@ -97,6 +99,10 @@ class AcademicEventConsumer:
 
             async with AsyncSessionLocal() as session:
                 try:
+                    seen = await session.scalar(select(ProcessedEvent).where(ProcessedEvent.event_id == str(envelope.event_id)))
+                    if seen:
+                        await message.ack()
+                        return
                     service = ChatService(
                         session=session
                     )
@@ -112,6 +118,12 @@ class AcademicEventConsumer:
                             student_id=user_id,
                             admin_id=settings.ADMIN_USER_ID
                         )
+
+                    session.add(ProcessedEvent(
+                        event_id=str(envelope.event_id),
+                        event_type=envelope.event_type,
+                        producer=envelope.producer,
+                    ))
 
                     await session.commit()
 

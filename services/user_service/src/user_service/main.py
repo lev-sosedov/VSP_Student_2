@@ -198,7 +198,7 @@ async def health_check():
 
 @app.get("/ready", tags=["System"])
 async def ready_check():
-    return await database_readiness(engine, ("users", "user_event_outbox"), {"rabbitmq": True})
+    return await database_readiness(engine, ("users", "user_event_outbox"), {"rabbitmq": "probe-rabbitmq"})
 
 
 @app.get(

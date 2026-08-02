@@ -116,4 +116,4 @@ async def health_check():
 
 @app.get("/ready", tags=["System"])
 async def ready_check():
-    return await database_readiness(engine, ("auth_users", "refresh_sessions", "processed_user_events"), {"rabbitmq": True, "redis": True})
+    return await database_readiness(engine, ("auth_users", "refresh_sessions", "processed_user_events"), {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis"})

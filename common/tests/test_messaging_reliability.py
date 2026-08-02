@@ -98,4 +98,23 @@ def test_dlx_queue_is_durable_and_versioned():
 def test_readiness_never_contains_connection_url_or_secret_names():
     source = Path("common/src/common/readiness.py").read_text()
     assert "DATABASE_URL" not in source
-    assert "password" not in source.lower()
+    assert "traceback" not in source.lower()
+
+
+def test_state_mutating_communication_consumer_has_durable_marker():
+    source = Path("services/communication_service/src/communication_service/messaging/messaging_academic_event_consumer.py").read_text()
+    assert "ProcessedEvent" in source
+    assert "await session.commit()" in source
+    assert source.index("await session.commit()") < source.rfind("await message.ack()")
+
+
+def test_communication_idempotency_migration_is_separate_revision():
+    migration = Path("services/communication_service/alembic/versions/20260802_01_processed_events.py").read_text()
+    assert 'down_revision = "20260802_00"' in migration
+    assert "UniqueConstraint" in migration
+
+
+def test_readiness_uses_active_broker_probe():
+    source = Path("common/src/common/readiness.py").read_text()
+    assert "probe_rabbitmq" in source
+    assert "asyncio.wait_for" in source

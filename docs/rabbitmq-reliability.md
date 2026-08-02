@@ -14,7 +14,7 @@ messages are separate contracts and are never sent to an event DLQ.
 | academic-service | event consumer/publisher/RPC server | `vsh_student` (topic) | `academic_service`, `academic.#` | yes | consumer commit then ACK | `academic_service.v1.dlq` | handler-specific | none (events are emitted after domain commit) |
 | schedule-service | event publisher/RPC server | `vsh_student` (topic) | `schedule_service`, `schedule.#` | yes | persistent publisher confirms | n/a | n/a | none |
 | content-service | event publisher/RPC client | `vsh_student` (topic) | `content.*` | yes | persistent publisher confirms | n/a | n/a | none |
-| communication-service | event consumer/publisher/RPC client | `vsh_student` (topic) | `communication_service.academic_events` | yes, non-exclusive | commit then ACK; bounded retry | `communication_service.academic_events.v1.dlq` | domain event IDs | none |
+| communication-service | event consumer/publisher/RPC client | `vsh_student` (topic) | `communication_service.academic_events` | yes, non-exclusive | commit then ACK; bounded retry | `communication_service.academic_events.v1.dlq` | `processed_events.event_id` | none |
 | notification-service | event consumer/RPC client | `vsh_student` (topic) | `notification_service` | yes, non-exclusive | commit then ACK; bounded retry | `notification_service.v1.dlq` | `processed_events.event_id` | none |
 | news-service | event publisher/RPC client | `vsh_student` (topic) | `news.*` | yes | persistent publisher confirms | n/a | n/a | none |
 
@@ -54,7 +54,8 @@ prevents duplicate business changes.
 
 The code adds `user_service` revision `20260802_01` for outbox delivery
 metadata (`retry_count`, `next_attempt_at`, `last_error_code`) and
-`notification_service` revision `20260802_01` for durable `processed_events`.
+`notification_service` and `communication_service` revision `20260802_01` for
+durable `processed_events`.
 Neither revision is applied automatically at startup.
 
 1. Apply the new service migration in an isolated environment and verify one
