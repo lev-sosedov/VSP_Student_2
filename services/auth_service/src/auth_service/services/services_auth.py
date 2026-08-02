@@ -21,6 +21,7 @@ from auth_service.services.identity_resolver import IdentityResolver
 from common.identity import IdentityResolutionError
 from common.security.exceptions import SecurityError
 from auth_service.repositories.repository_refresh_session import RefreshSessionRepository, hash_refresh_token
+from auth_service.repositories.repository_login_attempt import LoginAttemptRepository
 
 
 class AuthService:
@@ -28,6 +29,7 @@ class AuthService:
     def __init__(self, db, identity_resolver=None):
         self.repo = AuthRepository(db)
         self.sessions = RefreshSessionRepository(db)
+        self.audit = LoginAttemptRepository(db)
         self.identity_resolver = identity_resolver or IdentityResolver(user_identity_rpc_client)
 
     async def register(self, data: RegisterRequest):
@@ -65,18 +67,29 @@ class AuthService:
             "message": "User created"
         }
 
-    async def login(self, data: LoginRequest):
+    async def _audit(self, data, *, success, reason, user=None, request=None):
+        try:
+            await self.audit.record(phone=data.phone_number, success=success,
+                reason_code=reason, auth_user_id=getattr(user, "id", None),
+                ip_address=request.client.host if request and request.client else None,
+                user_agent=request.headers.get("user-agent") if request else None)
+        except Exception:
+            await self.repo.db.rollback()
+
+    async def login(self, data: LoginRequest, request=None):
         user = await self.repo.get_user_by_phone(
             data.phone_number
         )
 
         if not user:
+            await self._audit(data, success=False, reason="user_not_found", request=request)
             raise HTTPException(
                 status_code=401,
                 detail="Invalid credentials"
             )
 
         if not user.is_active:
+            await self._audit(data, success=False, reason="user_inactive", user=user, request=request)
             raise HTTPException(
                 status_code=403,
                 detail="User blocked"
@@ -86,6 +99,7 @@ class AuthService:
             data.password,
             user.hashed_password
         ):
+            await self._audit(data, success=False, reason="invalid_password", user=user, request=request)
             raise HTTPException(
                 status_code=401,
                 detail="Invalid credentials"
@@ -94,11 +108,14 @@ class AuthService:
         try:
             identity = await self.identity_resolver.resolve(user)
         except IdentityResolutionError as exc:
+            await self._audit(data, success=False, reason="identity_resolution_failed", user=user, request=request)
             raise HTTPException(status_code=401, detail=exc.public_message) from exc
         if not identity.is_active or not identity.is_account_verified:
+            await self._audit(data, success=False, reason="account_not_verified", user=user, request=request)
             raise HTTPException(status_code=403, detail="Account is not active or verified")
         pair = get_issuer().create_pair(identity)
         await self._store_refresh_session(pair, identity, data)
+        await self._audit(data, success=True, reason="success", user=user, request=request)
         return pair
 
     async def _store_refresh_session(self, pair, identity, request_data=None, family_id=None):

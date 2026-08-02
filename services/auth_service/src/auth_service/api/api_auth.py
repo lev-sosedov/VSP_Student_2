@@ -106,7 +106,7 @@ async def login(
     service = AuthService(db)
 
     try:
-        return await service.login(data)
+        return await service.login(data, request)
 
     except HTTPException:
         raise

@@ -27,8 +27,7 @@ class RefreshSessionRepository:
     async def get_active(self, jti: str) -> RefreshSession | None:
         result = await self.db.execute(select(RefreshSession).where(
             RefreshSession.refresh_jti == jti,
-            RefreshSession.revoked_at.is_(None),
-        ))
+        ).with_for_update())
         return result.scalar_one_or_none()
 
     async def revoke(self, session: RefreshSession, reason: str) -> None:

@@ -5,20 +5,23 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from auth_service.core.core_config import settings
 from auth_service.db.db_base import Base
 from auth_service.models.models_auth_user import AuthUser  # noqa: F401
+from auth_service.models.models_refresh_session import RefreshSession  # noqa: F401
+from auth_service.models.models_login_attempt import LoginAttempt  # noqa: F401
+import os
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+database_url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=settings.DATABASE_URL,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
@@ -35,7 +38,7 @@ def do_run_migrations(connection) -> None:
 
 async def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.DATABASE_URL
+    configuration["sqlalchemy.url"] = database_url
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
