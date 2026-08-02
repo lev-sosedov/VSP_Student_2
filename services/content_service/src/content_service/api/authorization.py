@@ -75,4 +75,8 @@ async def require_content_request(request: Request, principal: CurrentPrincipal 
             await require_lesson_role(principal, homework.lesson_id, "teacher" if principal.role is not RoleType.STUDENT else "student", published=(request.method == "GET"))
         elif lesson_id is not None:
             await require_lesson_role(principal, int(lesson_id), "teacher" if principal.role is not RoleType.STUDENT else "student", published=(request.method == "GET"))
+        elif request.method == "GET" and any(segment in path for segment in ("lesson-contents", "lesson-links", "lesson-attachments", "homeworks", "homework-attachments")):
+            # Do not expose an unscoped collection or opaque resource until its
+            # lesson/homework context has been loaded and authorized.
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Resource context is required")
     return principal
