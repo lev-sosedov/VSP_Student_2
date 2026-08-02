@@ -360,7 +360,11 @@ class ChatService:
         )
 
         chat = await self.chat_repository.create(
-            chat_data=chat_data.model_dump()
+            chat_data={
+                **chat_data.model_dump(),
+                "participant_one_id": min(student_id, admin_id),
+                "participant_two_id": max(student_id, admin_id),
+            }
         )
 
         await self.member_repository.create_owner(
