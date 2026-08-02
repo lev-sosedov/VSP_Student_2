@@ -133,6 +133,12 @@ jobs:
           for service in "${!DBS[@]}"; do
             db="${DBS[$service]}"
             psql -h 127.0.0.1 -U ci -d ci -c "CREATE DATABASE $db"
+            # auth-service migrations intentionally start from the existing
+            # credential schema; seed only that minimal contract in this
+            # disposable CI database (never in a development/production DB).
+            if [[ "$service" == "auth_service" ]]; then
+              psql -h 127.0.0.1 -U ci -d "$db" -c "CREATE TABLE auth_users (id INTEGER PRIMARY KEY)"
+            fi
             export DATABASE_URL="postgresql+asyncpg://ci:ci@127.0.0.1:5432/$db"
             python scripts/migrate_all_services.py --check >/dev/null
             python -m alembic -c "services/$service/alembic.ini" upgrade head
