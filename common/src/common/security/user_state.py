@@ -1,5 +1,6 @@
 """Redis-backed, short-lived authorization state shared by backend services."""
 import os
+from urllib.parse import quote
 from dataclasses import dataclass
 
 try:
@@ -22,8 +23,19 @@ def _key(auth_user_id: int) -> str:
     return f"security:user:{auth_user_id}"
 
 
+def _redis_url() -> str:
+    # Compose may inject an empty value when REDIS_URL is omitted from .env.
+    configured = os.getenv("REDIS_URL")
+    if configured:
+        return configured
+    password = os.getenv("REDIS_PASSWORD")
+    if password:
+        return f"redis://:{quote(password, safe='')}@redis:6379/0"
+    return "redis://redis:6379/0"
+
+
 async def get_user_security_state(auth_user_id: int) -> UserSecurityState | None:
-    redis = Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
+    redis = Redis.from_url(_redis_url(), decode_responses=True)
     try:
         values = await redis.hgetall(_key(auth_user_id))
         if not values:
@@ -34,7 +46,7 @@ async def get_user_security_state(auth_user_id: int) -> UserSecurityState | None
 
 
 async def set_user_security_state(*, auth_user_id: int, token_version: int, role: str, status: str) -> None:
-    redis = Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
+    redis = Redis.from_url(_redis_url(), decode_responses=True)
     try:
         await redis.hset(_key(auth_user_id), mapping={
             "token_version": str(token_version), "role": role, "status": status,

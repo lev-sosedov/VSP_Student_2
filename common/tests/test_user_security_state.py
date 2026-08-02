@@ -27,3 +27,18 @@ async def test_state_round_trip_contains_version_role_status(monkeypatch):
     state = await user_state.get_user_security_state(7)
     assert state is not None
     assert (state.token_version, state.role, state.status) == (3, "teacher", "active")
+
+
+@pytest.mark.asyncio
+async def test_empty_redis_url_uses_safe_default(monkeypatch):
+    captured = {}
+    monkeypatch.setenv("REDIS_URL", "")
+    monkeypatch.delenv("REDIS_PASSWORD", raising=False)
+
+    def factory(url, **kwargs):
+        captured["url"] = url
+        return FakeRedis()
+
+    monkeypatch.setattr(user_state.Redis, "from_url", factory)
+    await user_state.get_user_security_state(999)
+    assert captured["url"] == "redis://redis:6379/0"
