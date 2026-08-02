@@ -97,6 +97,8 @@ def main() -> int:
 
     for file_name in files:
         path = ROOT / file_name
+        if not path.exists():
+            continue
         if path.suffix.lower() not in {".py", ".md", ".yml", ".yaml", ".toml", ".txt"}:
             continue
         try:

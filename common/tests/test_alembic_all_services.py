@@ -23,3 +23,12 @@ def test_startup_table_creation_is_explicitly_opt_in():
     for service in SERVICES:
         source = (ROOT / "services" / service / "src" / service / "main.py").read_text(encoding="utf-8")
         assert 'AUTO_CREATE_TABLES", "false"' in source
+
+
+def test_startup_checks_schema_when_auto_creation_is_disabled():
+    readiness = (ROOT / "common/src/common/db_readiness.py").read_text(encoding="utf-8")
+    assert "to_regclass" in readiness
+    assert "run Alembic upgrade head" in readiness
+    for service in SERVICES:
+        source = (ROOT / "services" / service / "src" / service / "main.py").read_text(encoding="utf-8")
+        assert "require_schema_table" in source

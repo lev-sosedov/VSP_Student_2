@@ -4,6 +4,7 @@ import os
 from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations, require_teacher_or_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
+from common.db_readiness import require_schema_table
 
 from schedule_service.api.api_lesson_generation import (
     router as lesson_generation_router
@@ -62,6 +63,9 @@ async def lifespan(app: FastAPI):
         if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+        else:
+            async with engine.connect() as conn:
+                await require_schema_table(conn, "lesson_schedules")
 
         print(
             "📦 Database tables created",

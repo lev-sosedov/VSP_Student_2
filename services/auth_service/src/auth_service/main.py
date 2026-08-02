@@ -12,6 +12,7 @@ import asyncio
 import os
 from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from common.security.middleware import JWTAuthenticationMiddleware
+from common.db_readiness import require_schema_table
 
 
 @asynccontextmanager
@@ -20,6 +21,9 @@ async def lifespan(app: FastAPI):
     if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+    else:
+        async with engine.connect() as conn:
+            await require_schema_table(conn, "auth_users")
 
     sync_task = asyncio.create_task(consume_user_events_forever())
 
