@@ -1,0 +1,158 @@
+name: backend-ci
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYTHONPATH: common/src
+
+jobs:
+  configuration-and-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: common/requirements.txt
+      - name: Install tooling and runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r common/requirements.txt ruff mypy
+          for file in services/*/requirements.txt; do python -m pip install -r "$file"; done
+      - name: Generate temporary RSA pair
+        run: |
+          openssl genrsa -out "$RUNNER_TEMP/jwt_private.pem" 2048
+          openssl rsa -in "$RUNNER_TEMP/jwt_private.pem" -pubout -out "$RUNNER_TEMP/jwt_public.pem"
+      - name: Static checks
+        env:
+          JWT_PRIVATE_KEY_PATH: ${{ runner.temp }}/jwt_private.pem
+          JWT_PUBLIC_KEY_PATH: ${{ runner.temp }}/jwt_public.pem
+        run: |
+          python scripts/check_configuration.py
+          python -m ruff check common/src scripts/check_configuration.py
+          python -m mypy
+          python -m compileall -q common services scripts
+          git diff --check
+          if git ls-files | grep -E '(^|/)(\.env|.*\.(pem|key)|.*database.*\.sql)$'; then exit 1; fi
+
+  tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        options: >-
+          --health-cmd="pg_isready -U ci -d ci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      rabbitmq:
+        image: rabbitmq:3.13
+        env:
+          RABBITMQ_DEFAULT_USER: ci
+          RABBITMQ_DEFAULT_PASS: ci
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r common/requirements.txt
+          for file in services/*/requirements.txt; do python -m pip install -r "$file"; done
+          python -m pip install pytest pytest-asyncio
+      - name: Test suite
+        env:
+          DATABASE_URL: postgresql+asyncpg://ci:ci@127.0.0.1:5432/ci
+          RABBITMQ_USERNAME: ci
+          RABBITMQ_PASSWORD: ci
+          RABBITMQ_URL: amqp://ci:ci@127.0.0.1:5672/
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: python -m pytest
+
+  alembic:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        options: >-
+          --health-cmd="pg_isready -U ci -d ci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install migration dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r common/requirements.txt
+          for file in services/*/requirements.txt; do python -m pip install -r "$file"; done
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Upgrade each isolated database twice
+        env:
+          PGPASSWORD: ci
+        run: |
+          declare -A DBS=(
+            [auth_service]=auth_db [user_service]=user_db [academic_service]=academic_db
+            [schedule_service]=schedule_db [content_service]=content_db
+            [communication_service]=communication_db [notification_service]=notification_db [news_service]=news_db
+          )
+          for service in "${!DBS[@]}"; do
+            db="${DBS[$service]}"
+            psql -h 127.0.0.1 -U ci -d ci -c "CREATE DATABASE $db"
+            export DATABASE_URL="postgresql+asyncpg://ci:ci@127.0.0.1:5432/$db"
+            python scripts/migrate_all_services.py --check >/dev/null
+            python -m alembic -c "services/$service/alembic.ini" upgrade head
+            python -m alembic -c "services/$service/alembic.ini" upgrade head
+            python -m alembic -c "services/$service/alembic.ini" current
+            python -m alembic -c "services/$service/alembic.ini" heads
+          done
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create disposable Compose environment
+        run: |
+          cat > "$RUNNER_TEMP/ci.env" <<'EOF'
+          POSTGRES_USER=ci
+          POSTGRES_PASSWORD=ci
+          POSTGRES_DB=vsp
+          RABBITMQ_USERNAME=ci
+          RABBITMQ_PASSWORD=ci
+          REDIS_PASSWORD=ci
+          REDIS_URL=redis://redis:6379/0
+          JWT_ALGORITHM=RS256
+          JWT_PRIVATE_KEY_HOST_PATH=/tmp/jwt_private.pem
+          JWT_PUBLIC_KEY_HOST_PATH=/tmp/jwt_public.pem
+          JWT_ISSUER=vsp-auth-service
+          JWT_AUDIENCE=vsp-student-api
+          EOF
+          docker compose --env-file "$RUNNER_TEMP/ci.env" config --quiet
+      - name: Build all service images
+        run: docker compose --env-file "$RUNNER_TEMP/ci.env" build api-gateway auth-service user-service academic-service schedule-service content-service communication-service notification-service news-service

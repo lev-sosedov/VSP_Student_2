@@ -1,0 +1,42 @@
+[tool.pytest.ini_options]
+testpaths = ["common/tests", "services"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+pythonpath = [
+  "common/src",
+  "services/auth_service/src",
+  "services/user_service/src",
+  "services/academic_service/src",
+  "services/schedule_service/src",
+  "services/content_service/src",
+  "services/communication_service/src",
+  "services/notification_service/src",
+  "services/news_service/src",
+]
+markers = [
+  "asyncio: asynchronous tests",
+  "security: authentication and authorization tests",
+  "integration: tests requiring service-like infrastructure",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = [".venv", "**/alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+disable_error_code = ["unused-ignore", "arg-type"]
+files = [
+  "common/src/common/security",
+  "common/src/common/messaging_contract.py",
+  "common/src/common/messaging_reliability.py",
+  "common/src/common/rabbitmq_settings.py",
+  "common/src/common/outbox_worker.py",
+]
