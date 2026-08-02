@@ -27,3 +27,10 @@ def test_refresh_repository_uses_row_lock_for_rotation():
     from pathlib import Path
     source = Path(__file__).parents[1] / "src/auth_service/repositories/repository_refresh_session.py"
     assert "with_for_update" in source.read_text(encoding="utf-8")
+
+
+def test_login_refresh_session_starts_non_null_family(monkeypatch):
+    from pathlib import Path
+    source = Path(__file__).parents[1] / "src/auth_service/services/services_auth.py"
+    text = source.read_text(encoding="utf-8")
+    assert "family_id=family_id or uuid.uuid4().hex" in text
