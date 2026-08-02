@@ -4,6 +4,10 @@ from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
 from common.utils.enum_role import RoleType
 from schedule_service.messaging.messaging_rpc_client import rabbit_rpc_client
+from schedule_service.db.db_session import get_session
+from schedule_service.models.model_lesson_schedule import LessonSchedule
+from schedule_service.models.model_attendance import Attendance
+from sqlalchemy import select
 
 
 async def _membership(principal: CurrentPrincipal, group_id: int, role: str) -> CurrentPrincipal:
@@ -40,3 +44,45 @@ async def require_student_self_or_admin(
     if principal.role is not RoleType.ADMIN and int(request.path_params.get("student_id", 0)) != principal.user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
     return principal
+
+
+async def _lesson(request: Request, principal: CurrentPrincipal, teacher_only: bool, session) -> CurrentPrincipal:
+    lesson = await session.get(LessonSchedule, int(request.path_params["lesson_id"]))
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    if principal.role is RoleType.ADMIN:
+        return principal
+    role = "teacher" if teacher_only else "student"
+    return await _membership(principal, lesson.group_id, role)
+
+
+async def require_lesson_access(request: Request, principal: CurrentPrincipal = Depends(get_current_principal), session=Depends(get_session)) -> CurrentPrincipal:
+    return await _lesson(request, principal, False, session)
+
+
+async def require_lesson_teacher_or_admin(request: Request, principal: CurrentPrincipal = Depends(get_current_principal), session=Depends(get_session)) -> CurrentPrincipal:
+    return await _lesson(request, principal, True, session)
+
+
+async def require_attendance_access(request: Request, principal: CurrentPrincipal = Depends(get_current_principal), session=Depends(get_session)) -> CurrentPrincipal:
+    attendance = await session.get(Attendance, int(request.path_params["attendance_id"]))
+    if attendance is None:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    if principal.role is RoleType.ADMIN or attendance.student_id == principal.user_id:
+        return principal
+    lesson = await session.get(LessonSchedule, attendance.lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return await _membership(principal, lesson.group_id, "teacher")
+
+
+async def require_attendance_teacher_or_admin(request: Request, principal: CurrentPrincipal = Depends(get_current_principal), session=Depends(get_session)) -> CurrentPrincipal:
+    attendance = await session.get(Attendance, int(request.path_params["attendance_id"]))
+    if attendance is None:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    if principal.role is RoleType.ADMIN:
+        return principal
+    lesson = await session.get(LessonSchedule, attendance.lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return await _membership(principal, lesson.group_id, "teacher")
