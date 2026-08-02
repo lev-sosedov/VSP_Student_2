@@ -13,6 +13,9 @@ x-rabbitmq-environment: &rabbitmq-environment
   RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
   RABBITMQ_VIRTUAL_HOST: ${RABBITMQ_VIRTUAL_HOST:-/}
 
+x-redis-environment: &redis-environment
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0
+
 x-jwt-verification-environment: &jwt-verification-environment
   JWT_ALGORITHM: RS256
   JWT_ISSUER: ${JWT_ISSUER:-vsp-auth-service}
@@ -82,7 +85,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0
       RABBITMQ_USER_RPC_QUEUE: ${RABBITMQ_USER_RPC_QUEUE:-user_service.rpc}
       RABBITMQ_RPC_TIMEOUT_SECONDS: ${RABBITMQ_RPC_TIMEOUT_SECONDS:-5}
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key.pem
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-14}
@@ -103,7 +106,7 @@ services:
       - path: ./services/user_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${USER_DB_NAME:-vsp_user}
       ENVIRONMENT: ${APP_ENV:-development}
     volumes:
@@ -121,7 +124,7 @@ services:
       - path: ./services/academic_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${ACADEMIC_DB_NAME:-academic_db}
       ENVIRONMENT: ${APP_ENV:-development}
     volumes:
@@ -139,7 +142,7 @@ services:
       - path: ./services/schedule_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${SCHEDULE_DB_NAME:-schedule_db}
       ENVIRONMENT: ${APP_ENV:-development}
     volumes:
@@ -157,7 +160,7 @@ services:
       - path: ./services/content_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${CONTENT_DB_NAME:-content_db}
       ENVIRONMENT: ${APP_ENV:-development}
     volumes:
@@ -175,7 +178,7 @@ services:
       - path: ./services/notification_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${NOTIFICATION_DB_NAME:-notification_db}
       ENVIRONMENT: ${APP_ENV:-development}
       SMTP_HOST: ${SMTP_HOST:-smtp.mail.ru}
@@ -199,7 +202,7 @@ services:
       - path: ./services/communication_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${COMMUNICATION_DB_NAME:-communication_db}
       ENVIRONMENT: ${APP_ENV:-development}
       ADMIN_USER_ID: ${ADMIN_USER_ID:-8}
@@ -218,7 +221,7 @@ services:
       - path: ./services/news_service/.env
         required: false
     environment:
-      <<: [*rabbitmq-environment, *jwt-verification-environment]
+      <<: [*rabbitmq-environment, *redis-environment, *jwt-verification-environment]
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${NEWS_DB_NAME:-news_db}
       ENVIRONMENT: ${APP_ENV:-development}
     volumes:
