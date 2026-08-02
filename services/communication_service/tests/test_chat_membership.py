@@ -31,6 +31,9 @@ async def test_chat_member_dependency_allows_active_member(monkeypatch):
     class Repo:
         def __init__(self, session): pass
         async def get_member(self, chat_id, user_id): return type("Member", (), {"is_active": True})()
+    class Session:
+        async def get(self, model, chat_id):
+            return type("Chat", (), {"is_active": True, "group_id": None})()
     monkeypatch.setattr("communication_service.api.dependencies.ChatMemberRepository", Repo)
     principal = CurrentPrincipal(7, RoleType.STUDENT, "access", 1)
-    assert await require_chat_member(req(3), principal, object()) is principal
+    assert await require_chat_member(req(3), principal, Session()) is principal
