@@ -15,6 +15,12 @@ async def require_chat_member(
     session: AsyncSession = Depends(get_session),
 ) -> CurrentPrincipal:
     raw_chat_id = request.path_params.get("chat_id") or request.query_params.get("chat_id")
+    if raw_chat_id is None and request.method in {"POST", "PATCH", "DELETE"}:
+        try:
+            body = await request.json()
+            raw_chat_id = body.get("chat_id") if isinstance(body, dict) else None
+        except Exception:
+            raw_chat_id = None
     try:
         chat_id = int(raw_chat_id)
     except (TypeError, ValueError) as exc:
