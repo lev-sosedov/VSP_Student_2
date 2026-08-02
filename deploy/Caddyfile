@@ -11,6 +11,12 @@ https://vsp-student.ru {
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }
+    handle /docs {
+        respond 404
+    }
+    handle /openapi.json {
+        respond 404
+    }
     @health path /health
     handle @health {
         respond "ok" 200
@@ -19,7 +25,7 @@ https://vsp-student.ru {
         reverse_proxy api-gateway:8080
     }
     handle /ws/* {
-        reverse_proxy api-gateway:8080
+        reverse_proxy communication-service:8006
     }
     handle {
         reverse_proxy frontend:80

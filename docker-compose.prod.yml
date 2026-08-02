@@ -43,7 +43,7 @@ services:
   caddy:
     image: caddy:2.10-alpine
     restart: unless-stopped
-    networks: [edge]
+    networks: [edge, backend]
     environment:
       CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
     ports:
