@@ -25,6 +25,7 @@ from content_service.api.authorization import require_content_request
 from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
 from content_service.api.authorization import require_lesson_role
+from content_service.api.authorization import filter_lesson_collection
 
 router = APIRouter(
     prefix="/homeworks",
@@ -104,7 +105,8 @@ async def get_homeworks_endpoint(
         ge=1,
         le=500
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal)
 ):
     service = HomeworkService(
         session=session
@@ -119,6 +121,11 @@ async def get_homeworks_endpoint(
         skip=skip,
         limit=limit
     )
+    if principal.role.name != "ADMIN":
+        homeworks = await filter_lesson_collection(
+            principal, homeworks, published_only=principal.role.name == "STUDENT"
+        )
+        total = len(homeworks)
 
     return HomeworkListResponse(
         total=total,
