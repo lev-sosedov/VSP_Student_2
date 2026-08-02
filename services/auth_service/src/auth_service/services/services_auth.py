@@ -1,4 +1,6 @@
 from fastapi import HTTPException, status
+from datetime import datetime, timezone
+import jwt
 
 from auth_service.core.core_security import (
     hash_password,
@@ -18,12 +20,14 @@ from auth_service.messaging.messaging_rpc_client import user_identity_rpc_client
 from auth_service.services.identity_resolver import IdentityResolver
 from common.identity import IdentityResolutionError
 from common.security.exceptions import SecurityError
+from auth_service.repositories.repository_refresh_session import RefreshSessionRepository, hash_refresh_token
 
 
 class AuthService:
 
     def __init__(self, db, identity_resolver=None):
         self.repo = AuthRepository(db)
+        self.sessions = RefreshSessionRepository(db)
         self.identity_resolver = identity_resolver or IdentityResolver(user_identity_rpc_client)
 
     async def register(self, data: RegisterRequest):
@@ -91,7 +95,22 @@ class AuthService:
             identity = await self.identity_resolver.resolve(user)
         except IdentityResolutionError as exc:
             raise HTTPException(status_code=401, detail=exc.public_message) from exc
-        return get_issuer().create_pair(identity)
+        if not identity.is_active or not identity.is_account_verified:
+            raise HTTPException(status_code=403, detail="Account is not active or verified")
+        pair = get_issuer().create_pair(identity)
+        await self._store_refresh_session(pair, identity, data)
+        return pair
+
+    async def _store_refresh_session(self, pair, identity, request_data=None):
+        claims = jwt.decode(pair["refresh_token"], options={"verify_signature": False})
+        await self.sessions.create(
+            auth_user_id=identity.auth_user_id,
+            user_id=identity.user_id,
+            refresh_jti=claims["jti"],
+            refresh_token_hash=hash_refresh_token(pair["refresh_token"]),
+            token_version=identity.token_version,
+            expires_at=datetime.fromtimestamp(claims["exp"], tz=timezone.utc).replace(tzinfo=None),
+        )
 
     async def refresh(self, data: RefreshRequest):
         try:
@@ -101,13 +120,23 @@ class AuthService:
         auth_user = await self.repo.get_user_by_id(int(payload["auth_user_id"]))
         if auth_user is None or auth_user.token_version != int(payload["token_version"]):
             raise HTTPException(status_code=401, detail="Invalid refresh token")
+        session = await self.sessions.get_active(payload["jti"])
+        if session is None or session.refresh_token_hash != hash_refresh_token(data.refresh_token):
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
         try:
             identity = await self.identity_resolver.resolve(auth_user)
         except IdentityResolutionError as exc:
             raise HTTPException(status_code=401, detail=exc.public_message) from exc
         if identity.user_id != int(payload["sub"]):
             raise HTTPException(status_code=401, detail="Invalid refresh token")
-        return get_issuer().create_pair(identity)
+        await self.sessions.revoke(session, "rotation")
+        pair = get_issuer().create_pair(identity)
+        await self._store_refresh_session(pair, identity, data)
+        return pair
+
+    async def logout_all(self, user_id: int) -> None:
+        await self.sessions.revoke_user(user_id, "logout_all")
+        await self.repo.increment_token_version(user_id)
 
     async def change_password(
         self,
