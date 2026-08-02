@@ -170,3 +170,18 @@ jobs:
           docker compose --env-file "$RUNNER_TEMP/ci.env" config --quiet
       - name: Build all service images
         run: docker compose --env-file "$RUNNER_TEMP/ci.env" build api-gateway auth-service user-service academic-service schedule-service content-service communication-service notification-service news-service
+
+  production-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production Compose and Caddy
+        run: |
+          docker compose --env-file .env.production.example -f docker-compose.prod.yml config --quiet
+          docker run --rm -e CADDY_EMAIL=ops@example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.10-alpine caddy validate --config /etc/caddy/Caddyfile
+          if grep -E '"(5432|5672|6379|800[0-7]):' docker-compose.prod.yml; then exit 1; fi
+          grep -q '"80:80"' docker-compose.prod.yml
+          grep -q '"443:443"' docker-compose.prod.yml
+          if grep -RInE 'localhost|127\.0\.0\.1' .env.production.example deploy docker-compose.prod.yml; then exit 1; fi
+      - name: Build production backend images
+        run: docker compose --env-file .env.production.example -f docker-compose.prod.yml build api-gateway auth-service user-service academic-service schedule-service content-service communication-service notification-service news-service

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TRACKED_ENV_PATTERN = re.compile(r"(^|/)\.env(?:\..+)?$")
-SAFE_EXAMPLE_PATTERN = re.compile(r"(^|/)\.env\.example$")
+SAFE_EXAMPLE_PATTERN = re.compile(r"(^|/)\.env(?:\.production)?\.example$")
 SENSITIVE_KEY_FILE_PATTERN = re.compile(
     r"(^|/)(?:secrets?/.*|[^/]+\.(?:pem|key))$",
     re.IGNORECASE,
@@ -94,6 +94,29 @@ def main() -> int:
     example = (ROOT / ".env.example").read_text(encoding="utf-8")
     if "AUTO_CREATE_TABLES=" not in example:
         errors.append(".env.example must define AUTO_CREATE_TABLES")
+
+    production_compose = ROOT / "docker-compose.prod.yml"
+    caddyfile = ROOT / "deploy" / "Caddyfile"
+    production_example = ROOT / ".env.production.example"
+    for required in (production_compose, caddyfile, production_example):
+        if not required.exists():
+            errors.append(f"missing production deployment file: {required.relative_to(ROOT)}")
+    if production_compose.exists():
+        production_text = production_compose.read_text(encoding="utf-8")
+        if '"80:80"' not in production_text or '"443:443"' not in production_text:
+            errors.append("production Compose must publish only Caddy HTTP/HTTPS entrypoints")
+        for forbidden_port in ("5432:", "5672:", "6379:", "8000:", "8001:", "8002:", "8003:", "8004:", "8005:", "8006:", "8007:"):
+            if forbidden_port in production_text:
+                errors.append(f"production Compose exposes forbidden host port: {forbidden_port}")
+        if "AUTO_CREATE_TABLES: \"false\"" not in production_text:
+            errors.append("production Compose must force AUTO_CREATE_TABLES=false")
+        if "networks:" not in production_text or "edge:" not in production_text or "backend:" not in production_text or "data:" not in production_text:
+            errors.append("production Compose must define edge/backend/data networks")
+    if caddyfile.exists():
+        caddy_text = caddyfile.read_text(encoding="utf-8")
+        for required in ("vsp-student.ru", "reverse_proxy api-gateway:8080", "reverse_proxy frontend:80"):
+            if required not in caddy_text:
+                errors.append(f"Caddyfile missing {required}")
 
     contract = ROOT / "common" / "src" / "common" / "messaging_contract.py"
     contract_text = contract.read_text(encoding="utf-8")
