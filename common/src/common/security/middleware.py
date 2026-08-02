@@ -22,7 +22,9 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
         public_get_prefixes: Collection[str] = (),
     ) -> None:
         super().__init__(app)
-        base_public = {"/", "/health"}
+        # Exact infrastructure probes only.  Do not broaden this to prefixes:
+        # `/ready/test` and similarly named application routes remain protected.
+        base_public = {"/", "/health", "/ready"}
         if os.environ.get("ENVIRONMENT", os.environ.get("APP_ENV", "development")) != "production":
             base_public.update({"/docs", "/redoc", "/openapi.json"})
         self.public_paths = frozenset(public_paths) | frozenset(base_public)
