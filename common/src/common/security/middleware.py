@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from common.security.dependencies import get_jwt_provider
 from common.security.exceptions import AuthenticationError, MissingTokenError
+from common.security.user_state import get_user_security_state
 
 
 class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
@@ -43,12 +44,26 @@ class JWTAuthenticationMiddleware(BaseHTTPMiddleware):
             if scheme.lower() != "bearer" or not token.strip():
                 raise MissingTokenError()
             request.state.current_principal = get_jwt_provider().verify_access_token(token)
+            principal = request.state.current_principal
+            state = await get_user_security_state(int(principal.claims["auth_user_id"]))
+            if state is not None:
+                if state.status in {"blocked", "deleted", "inactive"}:
+                    return JSONResponse(status_code=401, content={"detail": "User is not active"})
+                if state.token_version != principal.token_version:
+                    return JSONResponse(status_code=401, content={"detail": "Token has been revoked"})
+                if state.role != principal.role.value:
+                    return JSONResponse(status_code=401, content={"detail": "Token role is stale"})
         except AuthenticationError as exc:
             return JSONResponse(
                 status_code=401,
                 content={"detail": {"code": exc.code, "message": exc.public_message}},
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        except Exception:
+            # Missing state is intentionally allowed for existing users. Redis
+            # failures fail closed for mutations and fail open for reads.
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                return JSONResponse(status_code=503, content={"detail": "Authorization state unavailable"})
         return await call_next(request)
 
     def _is_public(self, request: Request) -> bool:

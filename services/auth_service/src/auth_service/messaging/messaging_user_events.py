@@ -8,6 +8,7 @@ from auth_service.db.db_session import AsyncSessionLocal
 from auth_service.models.models_auth_user import AuthUser
 from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from auth_service.repositories.repository_refresh_session import RefreshSessionRepository
+from common.security.user_state import set_user_security_state
 
 
 async def consume_user_events_forever():
@@ -40,6 +41,12 @@ async def consume_user_events_forever():
                                 if event_type in {"user.role.changed", "user.blocked", "user.deleted"}:
                                     user.token_version += 1
                                     await RefreshSessionRepository(session).revoke_user(user.id, event_type)
+                                await set_user_security_state(
+                                    auth_user_id=user.id,
+                                    token_version=user.token_version,
+                                    role=str(user.role.value if hasattr(user.role, "value") else user.role),
+                                    status=("deleted" if event_type == "user.deleted" else "blocked" if event_type == "user.blocked" else "active"),
+                                )
                             session.add(ProcessedUserEvent(event_id=event_id))
                             await session.commit()
             await connection.close()
