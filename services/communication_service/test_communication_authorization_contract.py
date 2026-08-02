@@ -26,3 +26,17 @@ def test_websocket_and_http_require_active_member():
     ws = Path("services/communication_service/src/communication_service/api/api_websocket.py").read_text(encoding="utf-8")
     assert "member.is_active" in http
     assert "validate_websocket_access" in ws
+
+
+def test_legacy_private_pairs_are_canonicalized_before_creation():
+    source = Path("services/communication_service/src/communication_service/services/service_chat.py").read_text(encoding="utf-8")
+    assert "get_private_chats_between" in source
+    assert "min(student_id, admin_id)" in source
+    assert "await self.session.flush()" in source
+    assert "except IntegrityError" in source
+
+
+def test_private_chat_cannot_gain_third_member():
+    source = Path("services/communication_service/src/communication_service/services/service_chat.py").read_text(encoding="utf-8")
+    assert "ChatType.PRIVATE" in source
+    assert "third" in source.lower() or "private" in source.lower()

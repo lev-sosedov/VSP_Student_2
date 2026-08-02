@@ -7,6 +7,9 @@ from fastapi import (
     Request
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.permissions import require_admin
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
 
 from common.utils.enum_post_status import (
     PostStatus
@@ -65,8 +68,10 @@ async def get_post_or_404(
 )
 async def create_post_endpoint(
     post_data: PostCreate,
+    principal: CurrentPrincipal = Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
+    post_data.created_by = principal.user_id
     service = PostService(
         session=session
     )
@@ -224,6 +229,7 @@ async def get_post_endpoint(
 async def update_post_endpoint(
     post_id: int,
     post_data: PostUpdate,
+    _admin=Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = PostService(
@@ -260,6 +266,7 @@ async def update_post_endpoint(
 async def publish_post_endpoint(
     post_id: int,
     publish_data: PostPublishRequest,
+    _admin=Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = PostService(
@@ -296,6 +303,7 @@ async def publish_post_endpoint(
 async def unpublish_post_endpoint(
     post_id: int,
     action_data: PostActionRequest,
+    principal: CurrentPrincipal = Depends(require_admin()),
     session: AsyncSession = Depends(get_session)
 ):
     service = PostService(
@@ -310,7 +318,7 @@ async def unpublish_post_endpoint(
     try:
         return await service.unpublish(
             post=post,
-            user_id=action_data.user_id
+            user_id=principal.user_id
         )
 
     except ValueError as error:
