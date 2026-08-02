@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from academic_service.services.service_group_member import GroupMemberService
 
@@ -606,8 +609,11 @@ async def count_teachers(
 )
 async def get_user_groups(
         user_id: int,
-        service: GroupMemberService = Depends(get_group_member_service)
+        service: GroupMemberService = Depends(get_group_member_service),
+        principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role is not RoleType.ADMIN and user_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     try:
         return await service.get_user_groups(user_id)
 
