@@ -21,9 +21,12 @@ from content_service.services.service_lesson_attachment import (
 )
 
 
+from content_service.api.authorization import require_content_request
+
 router = APIRouter(
     prefix="/lesson-attachments",
-    tags=["Lesson attachments"]
+    tags=["Lesson attachments"],
+    dependencies=[Depends(require_content_request)]
 )
 
 

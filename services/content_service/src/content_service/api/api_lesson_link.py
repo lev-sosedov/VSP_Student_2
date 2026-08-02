@@ -21,9 +21,12 @@ from content_service.services.service_lesson_link import (
 )
 
 
+from content_service.api.authorization import require_content_request
+
 router = APIRouter(
     prefix="/lesson-links",
-    tags=["Lesson links"]
+    tags=["Lesson links"],
+    dependencies=[Depends(require_content_request)]
 )
 
 

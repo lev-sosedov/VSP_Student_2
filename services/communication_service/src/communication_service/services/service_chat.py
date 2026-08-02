@@ -1,4 +1,5 @@
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.utils.enum_chat_member_role import (
@@ -331,6 +332,11 @@ class ChatService:
         if existing_chats:
             primary_chat = existing_chats[0]
 
+            if primary_chat.participant_one_id is None or primary_chat.participant_two_id is None:
+                primary_chat.participant_one_id = min(student_id, admin_id)
+                primary_chat.participant_two_id = max(student_id, admin_id)
+                await self.session.flush()
+
             # Дубли, созданные прежней версией, не удаляем:
             # архивирование скрывает их, но сохраняет историю.
             for duplicate_chat in existing_chats[1:]:
@@ -359,9 +365,23 @@ class ChatService:
             created_by=admin_id
         )
 
-        chat = await self.chat_repository.create(
-            chat_data=chat_data.model_dump()
-        )
+        try:
+            chat = await self.chat_repository.create(
+                chat_data={
+                    **chat_data.model_dump(),
+                    "participant_one_id": min(student_id, admin_id),
+                    "participant_two_id": max(student_id, admin_id),
+                }
+            )
+            await self.session.flush()
+        except IntegrityError:
+            await self.session.rollback()
+            existing_chats = await self.chat_repository.get_private_chats_between(
+                first_user_id=student_id, second_user_id=admin_id
+            )
+            if not existing_chats:
+                raise
+            return existing_chats[0]
 
         await self.member_repository.create_owner(
             chat_id=chat.id,

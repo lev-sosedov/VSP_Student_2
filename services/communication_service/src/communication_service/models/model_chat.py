@@ -111,3 +111,7 @@ class Chat(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+
+    # Canonical unordered pair for private chats. Nullable for legacy rows.
+    participant_one_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    participant_two_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)

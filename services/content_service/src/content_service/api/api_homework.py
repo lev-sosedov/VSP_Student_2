@@ -21,9 +21,15 @@ from content_service.services.service_homework import (
 )
 
 
+from content_service.api.authorization import require_content_request
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from content_service.api.authorization import require_lesson_role
+
 router = APIRouter(
     prefix="/homeworks",
-    tags=["Homeworks"]
+    tags=["Homeworks"],
+    dependencies=[Depends(require_content_request)]
 )
 
 
@@ -39,8 +45,12 @@ router = APIRouter(
 )
 async def create_homework_endpoint(
     homework_data: HomeworkCreate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal)
 ):
+    await require_lesson_role(principal, homework_data.lesson_id, "teacher")
+    if principal.role.name != "ADMIN" and homework_data.created_by != principal.user_id:
+        raise HTTPException(status_code=403, detail="created_by must match authenticated teacher")
     service = HomeworkService(
         session=session
     )

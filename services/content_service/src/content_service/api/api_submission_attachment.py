@@ -23,9 +23,12 @@ from content_service.services.service_submission_attachment import (
 )
 
 
+from content_service.api.authorization import require_content_request
+
 router = APIRouter(
     prefix="/submission-attachments",
-    tags=["Submission attachments"]
+    tags=["Submission attachments"],
+    dependencies=[Depends(require_content_request)]
 )
 
 async def _submission_for(service, submission_id: int, principal: CurrentPrincipal):

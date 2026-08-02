@@ -13,6 +13,16 @@ from common.utils.enum_lesson_status import LessonStatus
 from common.utils.enum_schedule_change_type import ScheduleChangeType
 
 from schedule_service.db.db_session import get_session
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
+from schedule_service.api.authorization import (
+    _membership,
+    _user_groups,
+    require_group_member_or_admin,
+    require_lesson_access,
+    require_lesson_teacher_or_admin,
+)
 from schedule_service.models.model_lesson_schedule import LessonSchedule
 from schedule_service.schemas.schemas_lesson_schedule import (
     LessonCancelRequest,
@@ -211,8 +221,13 @@ async def validate_lesson_template(
 )
 async def create_lesson_endpoint(
     lesson_data: LessonScheduleCreate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role is not RoleType.ADMIN:
+        await _membership(principal, lesson_data.group_id, "teacher")
+        if lesson_data.teacher_id != principal.user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher identity mismatch")
     # Проверяем группу, преподавателя и кабинет
     await validate_lesson_relations(
         session=session,
@@ -303,8 +318,15 @@ async def get_lessons_endpoint(
         ge=1,
         le=500
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    group_ids = None
+    if principal.role is not RoleType.ADMIN:
+        if group_id is not None:
+            await _membership(principal, group_id, "teacher" if principal.role is RoleType.TEACHER else "student")
+        else:
+            group_ids = await _user_groups(principal)
     if (
         lesson_date_from is not None
         and lesson_date_to is not None
@@ -321,6 +343,7 @@ async def get_lessons_endpoint(
     lessons, total = await get_lessons(
         session=session,
         group_id=group_id,
+        group_ids=group_ids,
         teacher_id=teacher_id,
         room_id=room_id,
         lesson_date_from=lesson_date_from,
@@ -355,7 +378,8 @@ async def get_group_lessons_endpoint(
     lesson_date_to: date | None = Query(
         default=None
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    _principal=Depends(require_group_member_or_admin),
 ):
     if (
         lesson_date_from is not None
@@ -402,8 +426,11 @@ async def get_teacher_lessons_endpoint(
     lesson_date_to: date | None = Query(
         default=None
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role is not RoleType.ADMIN and teacher_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     if (
         lesson_date_from is not None
         and lesson_date_to is not None
@@ -443,7 +470,8 @@ async def get_teacher_lessons_endpoint(
 )
 async def get_lesson_endpoint(
     lesson_id: int,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    _principal=Depends(require_lesson_access),
 ):
     lesson = await get_lesson_by_id(
         session=session,
@@ -471,7 +499,8 @@ async def get_lesson_endpoint(
 async def update_lesson_endpoint(
     lesson_id: int,
     lesson_data: LessonScheduleUpdate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(require_lesson_teacher_or_admin),
 ):
     lesson = await get_lesson_by_id(
         session=session,
@@ -508,6 +537,9 @@ async def update_lesson_endpoint(
         if lesson_data.teacher_id is not None
         else lesson.teacher_id
     )
+
+    if principal.role is RoleType.TEACHER and new_teacher_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher identity mismatch")
 
     new_room_id = (
         lesson_data.room_id
@@ -629,7 +661,8 @@ async def update_lesson_endpoint(
 async def cancel_lesson_endpoint(
     lesson_id: int,
     cancel_data: LessonCancelRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    _principal=Depends(require_lesson_teacher_or_admin),
 ):
     lesson = await get_lesson_by_id(
         session=session,
@@ -695,7 +728,8 @@ async def cancel_lesson_endpoint(
 async def complete_lesson_endpoint(
     lesson_id: int,
     complete_data: LessonCompleteRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    _principal=Depends(require_lesson_teacher_or_admin),
 ):
     lesson = await get_lesson_by_id(
         session=session,
@@ -762,7 +796,8 @@ async def complete_lesson_endpoint(
 async def reschedule_lesson_endpoint(
     lesson_id: int,
     reschedule_data: LessonRescheduleRequest,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(require_lesson_teacher_or_admin),
 ):
     lesson = await get_lesson_by_id(
         session=session,
@@ -802,6 +837,9 @@ async def reschedule_lesson_endpoint(
         if reschedule_data.teacher_id is not None
         else lesson.teacher_id
     )
+
+    if principal.role is RoleType.TEACHER and new_teacher_id != principal.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher identity mismatch")
 
     # Проверяем преподавателя, группу и кабинет
     await validate_lesson_relations(

@@ -32,6 +32,7 @@ from communication_service.services.service_chat import (
 from communication_service.services.service_message_read import (
     MessageReadService
 )
+from communication_service.messaging.messaging_rpc_client import communication_rpc_client
 
 
 router = APIRouter(
@@ -57,6 +58,20 @@ async def create_chat_endpoint(
 ):
     if chat_data.created_by != principal.user_id:
         raise HTTPException(status_code=403, detail="created_by must match authenticated user")
+    if chat_data.chat_type == ChatType.GROUP:
+        if principal.role not in {RoleType.TEACHER, RoleType.ADMIN}:
+            raise HTTPException(status_code=403, detail="Only teachers or administrators may create group chats")
+        if principal.role is not RoleType.ADMIN:
+            try:
+                membership = await communication_rpc_client.call_academic(
+                    method="academic.authorization.membership",
+                    payload={"user_id": principal.user_id, "group_id": chat_data.group_id, "role": "teacher"},
+                    timeout=2.0,
+                )
+                if not isinstance(membership, dict) or membership.get("success") is not True or membership.get("exists") is not True or membership.get("is_active") is not True:
+                    raise ValueError("not an active group teacher")
+            except Exception as exc:
+                raise HTTPException(status_code=403, detail="Group authorization unavailable") from exc
     service = ChatService(
         session=session
     )

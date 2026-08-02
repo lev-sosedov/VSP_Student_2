@@ -21,9 +21,12 @@ from content_service.services.service_homework_attachment import (
 )
 
 
+from content_service.api.authorization import require_content_request
+
 router = APIRouter(
     prefix="/homework-attachments",
-    tags=["Homework attachments"]
+    tags=["Homework attachments"],
+    dependencies=[Depends(require_content_request)]
 )
 
 
