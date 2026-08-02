@@ -50,6 +50,8 @@ jobs:
     services:
       postgres:
         image: postgres:16
+        ports:
+          - 5432:5432
         env:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
@@ -59,6 +61,8 @@ jobs:
           --health-interval=5s --health-timeout=5s --health-retries=20
       rabbitmq:
         image: rabbitmq:3.13
+        ports:
+          - 5672:5672
         env:
           RABBITMQ_DEFAULT_USER: ci
           RABBITMQ_DEFAULT_PASS: ci
@@ -67,6 +71,8 @@ jobs:
           --health-interval=5s --health-timeout=5s --health-retries=20
       redis:
         image: redis:7
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd="redis-cli ping"
           --health-interval=5s --health-timeout=5s --health-retries=20
@@ -95,6 +101,8 @@ jobs:
     services:
       postgres:
         image: postgres:16
+        ports:
+          - 5432:5432
         env:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci

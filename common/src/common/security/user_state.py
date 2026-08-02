@@ -2,6 +2,7 @@
 import os
 from urllib.parse import quote
 from dataclasses import dataclass
+from typing import Any
 
 try:
     from redis.asyncio import Redis
@@ -35,7 +36,7 @@ def _redis_url() -> str:
 
 
 async def get_user_security_state(auth_user_id: int) -> UserSecurityState | None:
-    redis = Redis.from_url(_redis_url(), decode_responses=True)
+    redis: Any = Redis.from_url(_redis_url(), decode_responses=True)
     try:
         values = await redis.hgetall(_key(auth_user_id))
         if not values:
@@ -46,7 +47,7 @@ async def get_user_security_state(auth_user_id: int) -> UserSecurityState | None
 
 
 async def set_user_security_state(*, auth_user_id: int, token_version: int, role: str, status: str) -> None:
-    redis = Redis.from_url(_redis_url(), decode_responses=True)
+    redis: Any = Redis.from_url(_redis_url(), decode_responses=True)
     try:
         await redis.hset(_key(auth_user_id), mapping={
             "token_version": str(token_version), "role": role, "status": status,
