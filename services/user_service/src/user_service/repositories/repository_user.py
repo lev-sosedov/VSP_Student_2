@@ -13,7 +13,7 @@ class UserRepository:
 
     async def create(self, user: User):
         self.db.add(user)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(user)
         return user
 
@@ -83,7 +83,7 @@ class UserRepository:
         for field, value in data.items():
             setattr(user, field, value)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(user)
 
         return user
@@ -91,11 +91,11 @@ class UserRepository:
     async def save(self, user: User):
         self.db.add(user)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(user)
 
         return user
 
     async def delete(self, user: User):
         await self.db.delete(user)
-        await self.db.commit()
+        await self.db.flush()

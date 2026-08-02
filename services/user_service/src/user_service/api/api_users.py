@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from common.security.permissions import require_admin, require_self_or_admin
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import get_db
 from user_service.services.service_user import UserService
@@ -15,6 +18,26 @@ from user_service.schemas.schemas_user import (
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_my_profile(
+    principal: CurrentPrincipal = Depends(get_current_principal),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await UserService(db).get_user(principal.user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_my_profile(
+    data: UserUpdate,
+    principal: CurrentPrincipal = Depends(get_current_principal),
+    db: AsyncSession = Depends(get_db),
+):
+    return await UserService(db).update_user(principal.user_id, data)
 
 
 @router.post(
@@ -284,7 +307,7 @@ async def verify_phone(
 )
 async def delete_user(
     user_id: int,
-    _principal=Depends(require_self_or_admin()),
+    _principal=Depends(require_admin()),
     db: AsyncSession = Depends(get_db)
 ):
     service = UserService(db)

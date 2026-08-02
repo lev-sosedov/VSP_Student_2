@@ -5,4 +5,5 @@ asyncpg
 pydantic
 pydantic-settings
 aio-pika
+redis>=6.2.0
 PyJWT[crypto]>=2.10.1,<3

@@ -7,6 +7,9 @@ from auth_service.db.db_session import engine
 from auth_service.db.db_base import Base
 from auth_service.models.models_auth_user import AuthUser
 from auth_service.messaging.messaging_rabbit import publish_user_created
+from auth_service.messaging.messaging_user_events import consume_user_events_forever
+import asyncio
+from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from common.security.middleware import JWTAuthenticationMiddleware
 
 
@@ -18,7 +21,15 @@ async def lifespan(app: FastAPI):
             Base.metadata.create_all
         )
 
+    sync_task = asyncio.create_task(consume_user_events_forever())
+
     yield
+
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
 
 
 

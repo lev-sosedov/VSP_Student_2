@@ -23,6 +23,7 @@ from common.identity import IdentityResolutionError
 from common.security.exceptions import SecurityError
 from auth_service.repositories.repository_refresh_session import RefreshSessionRepository, hash_refresh_token
 from auth_service.repositories.repository_login_attempt import LoginAttemptRepository
+from common.security.user_state import set_user_security_state
 
 
 class AuthService:
@@ -116,6 +117,7 @@ class AuthService:
             raise HTTPException(status_code=403, detail="Account is not active or verified")
         pair = get_issuer().create_pair(identity)
         await self._store_refresh_session(pair, identity, data)
+        await set_user_security_state(auth_user_id=identity.auth_user_id, token_version=identity.token_version, role=identity.role.value, status="active")
         await self._audit(data, success=True, reason="success", user=user, request=request)
         return pair
 
@@ -157,6 +159,7 @@ class AuthService:
         await self.sessions.revoke(session, "rotated")
         pair = get_issuer().create_pair(identity)
         new_session = await self._store_refresh_session(pair, identity, data, session.family_id)
+        await set_user_security_state(auth_user_id=identity.auth_user_id, token_version=identity.token_version, role=identity.role.value, status="active")
         session.replaced_by_session_id = new_session.id
         await self.repo.db.commit()
         return pair
@@ -211,7 +214,14 @@ class AuthService:
                 data.new_password
             )
         )
-        await self.repo.increment_token_version(user.id)
+        new_version = await self.repo.increment_token_version(user.id)
+        await self.sessions.revoke_user(user.id, "password_changed")
+        await set_user_security_state(
+            auth_user_id=user.id,
+            token_version=new_version or user.token_version,
+            role=str(user.role),
+            status="active",
+        )
 
         return {
             "message": "Пароль успешно изменён"

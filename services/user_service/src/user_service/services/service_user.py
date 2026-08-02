@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import uuid4
 
 from common.utils.enum_role import RoleType
 
@@ -13,6 +14,7 @@ from user_service.schemas.schemas_user import (
 from user_service.schemas.schemas_events import (
     UserCreatedEvent
 )
+from user_service.repositories.repository_outbox import OutboxRepository
 
 
 class UserService:
@@ -22,6 +24,17 @@ class UserService:
         db: AsyncSession
     ):
         self.repo = UserRepository(db)
+        self.outbox = OutboxRepository(db)
+
+    async def _commit_event(self, user, event_type: str, **extra):
+        await self.outbox.add(
+            event_id=uuid4().hex,
+            event_type=event_type,
+            user_id=user.id,
+            auth_id=user.auth_id,
+            payload={"role": getattr(user.role, "value", str(user.role)), "is_active": user.is_active, **extra},
+        )
+        await self.repo.db.commit()
 
     async def create_user(
         self,
@@ -42,7 +55,9 @@ class UserService:
             role=RoleType.USER
         )
 
-        return await self.repo.create(user)
+        await self.repo.create(user)
+        await self._commit_event(user, "user.created")
+        return user
 
     async def create_user_from_event(
         self,
@@ -62,7 +77,9 @@ class UserService:
             role=RoleType.USER
         )
 
-        return await self.repo.create(user)
+        await self.repo.create(user)
+        await self.repo.db.commit()
+        return user
 
     async def get_user(
         self,
@@ -107,12 +124,14 @@ class UserService:
                 "User not found"
             )
 
-        return await self.repo.update(
+        user = await self.repo.update(
             user,
             data.model_dump(
                 exclude_unset=True
             )
         )
+        await self._commit_event(user, "user.updated")
+        return user
 
     async def change_role(
         self,
@@ -130,7 +149,9 @@ class UserService:
 
         user.role = role
 
-        return await self.repo.save(user)
+        await self.repo.save(user)
+        await self._commit_event(user, "user.role.changed")
+        return user
 
     async def activate_user(
         self,
@@ -147,7 +168,9 @@ class UserService:
 
         user.is_active = True
 
-        return await self.repo.save(user)
+        await self.repo.save(user)
+        await self._commit_event(user, "user.activated")
+        return user
 
     async def block_user(
         self,
@@ -164,7 +187,9 @@ class UserService:
 
         user.is_active = False
 
-        return await self.repo.save(user)
+        await self.repo.save(user)
+        await self._commit_event(user, "user.blocked")
+        return user
 
     async def verify_account(
         self,
@@ -181,7 +206,9 @@ class UserService:
 
         user.is_account_verified = True
 
-        return await self.repo.save(user)
+        await self.repo.save(user)
+        await self._commit_event(user, "user.account_verified")
+        return user
 
     async def verify_phone(
         self,
@@ -198,7 +225,9 @@ class UserService:
 
         user.is_phone_verified = True
 
-        return await self.repo.save(user)
+        await self.repo.save(user)
+        await self._commit_event(user, "user.phone_verified")
+        return user
 
     async def delete_user(
         self,
@@ -214,5 +243,7 @@ class UserService:
             )
 
         await self.repo.delete(user)
+        await self.outbox.add(event_id=uuid4().hex, event_type="user.deleted", user_id=user_id, auth_id=user.auth_id, payload={})
+        await self.repo.db.commit()
 
         return True
