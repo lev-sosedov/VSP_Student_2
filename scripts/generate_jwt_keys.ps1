@@ -24,11 +24,16 @@ if (-not $openssl -and (Test-Path -LiteralPath "C:\Program Files\Git\usr\bin\ope
 if (-not $openssl) {
     throw "OpenSSL was not found. Install OpenSSL or Git for Windows before generating JWT keys."
 }
+$opensslPath = if ($openssl -is [System.Management.Automation.ApplicationInfo]) {
+    $openssl.Source
+} else {
+    $openssl.FullName
+}
 
-& $openssl.Source genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out $private
+& $opensslPath genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out $private
 if ($LASTEXITCODE -ne 0) { throw "Private-key generation failed." }
 try {
-    & $openssl.Source pkey -in $private -pubout -out $public
+    & $opensslPath pkey -in $private -pubout -out $public
     if ($LASTEXITCODE -ne 0) { throw "Public-key generation failed." }
 } catch {
     if (Test-Path -LiteralPath $private) { Remove-Item -LiteralPath $private -Force }
