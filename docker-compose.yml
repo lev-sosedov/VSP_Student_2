@@ -79,6 +79,7 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${AUTH_DB_NAME:-vsp}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0
       RABBITMQ_USER_RPC_QUEUE: ${RABBITMQ_USER_RPC_QUEUE:-user_service.rpc}
       RABBITMQ_RPC_TIMEOUT_SECONDS: ${RABBITMQ_RPC_TIMEOUT_SECONDS:-5}
       <<: [*rabbitmq-environment, *jwt-verification-environment]
