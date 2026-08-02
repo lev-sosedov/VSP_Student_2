@@ -21,6 +21,9 @@ from content_service.services.service_lesson_content import (
 
 
 from content_service.api.authorization import require_content_request
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from content_service.api.authorization import filter_lesson_collection
 
 router = APIRouter(
     prefix="/lesson-contents",
@@ -89,7 +92,8 @@ async def get_lesson_contents_endpoint(
         ge=1,
         le=500
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal)
 ):
     service = LessonContentService(
         session=session
@@ -102,6 +106,11 @@ async def get_lesson_contents_endpoint(
         skip=skip,
         limit=limit
     )
+    if principal.role.name != "ADMIN":
+        contents = await filter_lesson_collection(
+            principal, contents, published_only=principal.role.name == "STUDENT"
+        )
+        total = len(contents)
 
     return LessonContentListResponse(
         total=total,

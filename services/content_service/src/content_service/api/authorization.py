@@ -28,7 +28,11 @@ async def lesson_context(lesson_id: int) -> dict[str, Any]:
 
 async def require_lesson_role(principal: CurrentPrincipal, lesson_id: int, role: str, *, published: bool = False) -> dict[str, Any]:
     context = await lesson_context(lesson_id)
-    if published and context.get("status") in {"cancelled", "completed"}:
+    # Historical/completed lessons remain visible to teachers for management
+    # and review.  Only students must be restricted to currently available
+    # published content; applying this rule to teachers made the dashboard
+    # reject otherwise valid homework from completed/cancelled lessons.
+    if published and principal.role is RoleType.STUDENT and context.get("status") in {"cancelled", "completed"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lesson is not available")
     if principal.role is RoleType.ADMIN:
         return context
@@ -75,8 +79,63 @@ async def require_content_request(request: Request, principal: CurrentPrincipal 
             await require_lesson_role(principal, homework.lesson_id, "teacher" if principal.role is not RoleType.STUDENT else "student", published=(request.method == "GET"))
         elif lesson_id is not None:
             await require_lesson_role(principal, int(lesson_id), "teacher" if principal.role is not RoleType.STUDENT else "student", published=(request.method == "GET"))
-        elif request.method == "GET" and any(segment in path for segment in ("lesson-contents", "lesson-links", "lesson-attachments", "homeworks", "homework-attachments")):
-            # Do not expose an unscoped collection or opaque resource until its
-            # lesson/homework context has been loaded and authorized.
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Resource context is required")
     return principal
+
+
+async def filter_lesson_collection(principal: CurrentPrincipal, resources: list[Any], *, published_only: bool = False) -> list[Any]:
+    """Filter collection rows by current user's active Academic groups."""
+    if principal.role is RoleType.ADMIN:
+        return resources
+    groups = await rabbit_rpc_client.call_academic(
+        "academic.authorization.user_groups", {"user_id": principal.user_id}, timeout=2.0
+    )
+    if not isinstance(groups, dict) or groups.get("success") is not True or not isinstance(groups.get("group_ids"), list):
+        raise HTTPException(status_code=403, detail="Group authorization unavailable")
+    allowed_groups = {int(value) for value in groups["group_ids"] if isinstance(value, int) and value > 0}
+    allowed: list[Any] = []
+    for resource in resources:
+        lesson_id = getattr(resource, "lesson_id", None)
+        if not isinstance(lesson_id, int):
+            continue
+        try:
+            context = await lesson_context(lesson_id)
+        except HTTPException as exc:
+            # An orphaned content row is safe to omit.  RPC outages and
+            # malformed responses must remain fail-closed rather than being
+            # disguised as an empty collection.
+            if exc.status_code == status.HTTP_404_NOT_FOUND:
+                continue
+            raise
+        if context.get("group_id") not in allowed_groups:
+            continue
+        if principal.role is RoleType.TEACHER:
+            membership = await rabbit_rpc_client.call_academic(
+                "academic.authorization.membership",
+                {"user_id": principal.user_id, "group_id": context["group_id"], "role": "teacher"},
+                timeout=2.0,
+            )
+            if not isinstance(membership, dict) or membership.get("success") is not True or membership.get("exists") is not True or membership.get("is_active") is not True:
+                continue
+        if published_only and (not getattr(resource, "is_published", False) or not getattr(resource, "is_active", True)):
+            continue
+        allowed.append(resource)
+    return allowed
+
+
+async def filter_submission_collection(principal: CurrentPrincipal, resources: list[Any]) -> list[Any]:
+    if principal.role is RoleType.ADMIN:
+        return resources
+    if principal.role is RoleType.STUDENT:
+        return [row for row in resources if getattr(row, "student_id", None) == principal.user_id]
+    allowed: list[Any] = []
+    async with AsyncSessionLocal() as session:
+        for row in resources:
+            homework = await session.get(Homework, getattr(row, "homework_id", 0))
+            if homework is None:
+                continue
+            try:
+                await require_lesson_role(principal, homework.lesson_id, "teacher")
+            except HTTPException:
+                continue
+            allowed.append(row)
+    return allowed

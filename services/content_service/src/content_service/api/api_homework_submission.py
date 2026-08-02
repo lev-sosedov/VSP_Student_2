@@ -32,6 +32,7 @@ from content_service.services.service_homework_submission import (
 
 from content_service.api.authorization import require_content_request
 from content_service.api.authorization import require_lesson_role
+from content_service.api.authorization import filter_submission_collection
 from content_service.models.model_homework import Homework
 
 router = APIRouter(
@@ -132,8 +133,11 @@ async def get_homework_submissions_endpoint(
         ge=1,
         le=500
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal)
 ):
+    if principal.role is RoleType.STUDENT:
+        student_id = principal.user_id
     service = HomeworkSubmissionService(
         session=session
     )
@@ -148,6 +152,8 @@ async def get_homework_submissions_endpoint(
         skip=skip,
         limit=limit
     )
+    submissions = await filter_submission_collection(principal, submissions)
+    total = len(submissions)
 
     return HomeworkSubmissionListResponse(
         total=total,
