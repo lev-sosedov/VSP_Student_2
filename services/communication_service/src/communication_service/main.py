@@ -1,9 +1,11 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI
 from common.security.middleware import JWTAuthenticationMiddleware
+from common.db_readiness import require_schema_table
 
 from communication_service.db import db_init_models
 from communication_service.db.db_base import Base
@@ -85,10 +87,12 @@ async def lifespan(app: FastAPI):
     # =========================
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(
-                Base.metadata.create_all
-            )
+        if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        else:
+            async with engine.connect() as conn:
+                await require_schema_table(conn, "chats")
 
         print(
             "📦 Database tables created",

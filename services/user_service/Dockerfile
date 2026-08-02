@@ -7,6 +7,8 @@ COPY services/user_service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/user_service/src ./src
+COPY services/user_service/alembic.ini ./alembic.ini
+COPY services/user_service/alembic ./alembic
 COPY common/src ./common/src
 
 ENV PYTHONPATH=/service/src:/service/common/src

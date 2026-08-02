@@ -78,8 +78,27 @@ def main() -> int:
     if compose.count("*redis-environment") < len(protected_services):
         errors.append("not all JWT-protected services receive REDIS_URL")
 
+    alembic_services = (
+        "auth_service", "user_service", "academic_service", "schedule_service",
+        "content_service", "communication_service", "notification_service", "news_service",
+    )
+    for service in alembic_services:
+        service_root = ROOT / "services" / service
+        for required in ("alembic.ini", "alembic/env.py", "alembic/script.py.mako"):
+            if not (service_root / required).exists():
+                errors.append(f"missing Alembic file: services/{service}/{required}")
+        versions = list((service_root / "alembic" / "versions").glob("*.py"))
+        if not versions:
+            errors.append(f"missing Alembic revisions: services/{service}")
+
+    example = (ROOT / ".env.example").read_text(encoding="utf-8")
+    if "AUTO_CREATE_TABLES=" not in example:
+        errors.append(".env.example must define AUTO_CREATE_TABLES")
+
     for file_name in files:
         path = ROOT / file_name
+        if not path.exists():
+            continue
         if path.suffix.lower() not in {".py", ".md", ".yml", ".yaml", ".toml", ".txt"}:
             continue
         try:

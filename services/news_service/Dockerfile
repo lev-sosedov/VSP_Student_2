@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /service/requirements.txt
 
 COPY services/news_service/src /service/src
+COPY services/news_service/alembic.ini /service/alembic.ini
+COPY services/news_service/alembic /service/alembic
 COPY common/src /common/src
 
 CMD ["uvicorn", "news_service.main:app", "--host", "0.0.0.0", "--port", "8007"]

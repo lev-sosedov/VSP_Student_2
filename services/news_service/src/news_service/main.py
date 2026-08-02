@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
+from common.db_readiness import require_schema_table
 
 from news_service.db import db_init_models
 from news_service.db.db_base import Base
@@ -49,10 +51,12 @@ async def lifespan(app: FastAPI):
     # =========================
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(
-                Base.metadata.create_all
-            )
+        if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        else:
+            async with engine.connect() as conn:
+                await require_schema_table(conn, "posts")
 
         print(
             "📦 Database tables created",
