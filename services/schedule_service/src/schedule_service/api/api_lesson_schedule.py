@@ -13,6 +13,7 @@ from common.utils.enum_lesson_status import LessonStatus
 from common.utils.enum_schedule_change_type import ScheduleChangeType
 
 from schedule_service.db.db_session import get_session
+from schedule_service.api.authorization import require_group_student_or_admin
 from schedule_service.models.model_lesson_schedule import LessonSchedule
 from schedule_service.schemas.schemas_lesson_schedule import (
     LessonCancelRequest,
@@ -355,7 +356,8 @@ async def get_group_lessons_endpoint(
     lesson_date_to: date | None = Query(
         default=None
     ),
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    _principal=Depends(require_group_student_or_admin),
 ):
     if (
         lesson_date_from is not None

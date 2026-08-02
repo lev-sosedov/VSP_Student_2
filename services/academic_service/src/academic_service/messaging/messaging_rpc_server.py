@@ -90,6 +90,13 @@ class AcademicRpcServer:
                         payload
                     )
 
+                elif method == "academic.authorization.membership":
+                    response = await self.authorization_membership(payload)
+                elif method == "academic.authorization.user_groups":
+                    response = await self.authorization_user_groups(payload)
+                elif method == "academic.authorization.group_context":
+                    response = await self.authorization_group_context(payload)
+
                 else:
                     response = {
                         "success": False,
@@ -365,6 +372,41 @@ class AcademicRpcServer:
                     for member in members
                 ]
             }
+
+    async def authorization_membership(self, payload: dict) -> dict:
+        try:
+            user_id, group_id = int(payload["user_id"]), int(payload["group_id"])
+        except (KeyError, TypeError, ValueError):
+            return {"success": False, "error": "user_id and group_id are required"}
+        role = payload.get("role")
+        async with AsyncSessionLocal() as session:
+            filters = [GroupMember.user_id == user_id, GroupMember.group_id == group_id, GroupMember.is_active.is_(True)]
+            if role:
+                filters.append(GroupMember.role == str(role))
+            member = (await session.execute(select(GroupMember).where(*filters))).scalar_one_or_none()
+            return {"success": True, "exists": member is not None, "is_active": bool(member and member.is_active), "member_role": member.role if member else None}
+
+    async def authorization_user_groups(self, payload: dict) -> dict:
+        try:
+            user_id = int(payload["user_id"])
+        except (KeyError, TypeError, ValueError):
+            return {"success": False, "error": "user_id is required"}
+        async with AsyncSessionLocal() as session:
+            rows = await session.execute(select(GroupMember.group_id).join(Group, Group.id == GroupMember.group_id).where(GroupMember.user_id == user_id, GroupMember.is_active.is_(True), Group.is_active.is_(True)))
+            return {"success": True, "group_ids": [int(x) for x in rows.scalars().all()]}
+
+    async def authorization_group_context(self, payload: dict) -> dict:
+        try:
+            group_id = int(payload["group_id"])
+        except (KeyError, TypeError, ValueError):
+            return {"success": False, "error": "group_id is required"}
+        async with AsyncSessionLocal() as session:
+            group = await session.get(Group, group_id)
+            if not group:
+                return {"success": True, "context": None}
+            rows = await session.execute(select(GroupMember.user_id, GroupMember.role).where(GroupMember.group_id == group_id, GroupMember.is_active.is_(True)))
+            teachers = [int(uid) for uid, role in rows.all() if str(role).lower() == "teacher"]
+            return {"success": True, "context": {"group_id": group.id, "teacher_ids": teachers, "branch_id": group.branch_id, "direction_id": group.direction_id, "education_plan_id": group.education_plan_id, "is_active": bool(group.is_active)}}
 
 
 academic_rpc_server = AcademicRpcServer()
