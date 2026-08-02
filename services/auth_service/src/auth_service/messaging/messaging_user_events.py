@@ -1,0 +1,49 @@
+import asyncio
+import json
+import aio_pika
+from sqlalchemy import select
+
+from auth_service.messaging.messaging_config import rabbitmq_settings
+from auth_service.db.db_session import AsyncSessionLocal
+from auth_service.models.models_auth_user import AuthUser
+from auth_service.models.models_processed_user_event import ProcessedUserEvent
+from auth_service.repositories.repository_refresh_session import RefreshSessionRepository
+
+
+async def consume_user_events_forever():
+    while True:
+        try:
+            connection = await aio_pika.connect_robust(rabbitmq_settings.url)
+            channel = await connection.channel()
+            exchange = await channel.declare_exchange("user_events", aio_pika.ExchangeType.FANOUT, durable=True)
+            queue = await channel.declare_queue("auth_user_sync", durable=True)
+            await queue.bind(exchange)
+            async with queue.iterator() as iterator:
+                async for message in iterator:
+                    async with message.process():
+                        event = json.loads(message.body)
+                        event_id = event.get("event_id")
+                        if not event_id:
+                            continue
+                        async with AsyncSessionLocal() as session:
+                            seen = await session.scalar(select(ProcessedUserEvent).where(ProcessedUserEvent.event_id == event_id))
+                            if seen:
+                                continue
+                            auth_id = event.get("auth_id")
+                            user = await session.get(AuthUser, auth_id) if auth_id else None
+                            if user is not None:
+                                event_type = event.get("event_type")
+                                if event_type == "user.role.changed" and event.get("role"):
+                                    user.role = event["role"]
+                                if event_type in {"user.blocked", "user.deleted"}:
+                                    user.is_active = False
+                                if event_type in {"user.role.changed", "user.blocked", "user.deleted"}:
+                                    user.token_version += 1
+                                    await RefreshSessionRepository(session).revoke_user(user.id, event_type)
+                            session.add(ProcessedUserEvent(event_id=event_id))
+                            await session.commit()
+            await connection.close()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            await asyncio.sleep(5)

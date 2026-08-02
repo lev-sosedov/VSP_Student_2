@@ -8,11 +8,13 @@ from user_service.db.db_session import engine, AsyncSessionLocal
 
 from user_service.models.model_user import User
 from user_service.models.model_parent_student import ParentStudentLink
+from user_service.models.model_outbox import UserEventOutbox
 
 from user_service.api.api_users import router as user_router
 from user_service.api.api_parent_students import router as parent_student_router
 from user_service.services.service_user import UserService
 from user_service.messaging.messaging_rabbit import consume_user_events
+from user_service.messaging.messaging_outbox import publish_outbox_forever
 from user_service.messaging.messaging_rpc_server import user_rpc_server
 from common.security.middleware import JWTAuthenticationMiddleware
 
@@ -89,6 +91,7 @@ async def lifespan(app: FastAPI):
     rpc_task = asyncio.create_task(
         start_rpc_server()
     )
+    outbox_task = asyncio.create_task(publish_outbox_forever())
 
     print("✅ User Service started")
 
@@ -102,6 +105,7 @@ async def lifespan(app: FastAPI):
 
     consumer_task.cancel()
     rpc_task.cancel()
+    outbox_task.cancel()
 
     try:
         await consumer_task
@@ -110,6 +114,10 @@ async def lifespan(app: FastAPI):
 
     try:
         await rpc_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await outbox_task
     except asyncio.CancelledError:
         pass
 
