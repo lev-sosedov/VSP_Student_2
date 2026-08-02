@@ -30,9 +30,14 @@ from content_service.services.service_homework_submission import (
 )
 
 
+from content_service.api.authorization import require_content_request
+from content_service.api.authorization import require_lesson_role
+from content_service.models.model_homework import Homework
+
 router = APIRouter(
     prefix="/homework-submissions",
-    tags=["Homework submissions"]
+    tags=["Homework submissions"],
+    dependencies=[Depends(require_content_request)]
 )
 
 
@@ -66,6 +71,10 @@ async def create_homework_submission_endpoint(
     service = HomeworkSubmissionService(
         session=session
     )
+    homework = await session.get(Homework, submission_data.homework_id)
+    if homework is None:
+        raise HTTPException(status_code=404, detail="Homework not found")
+    await require_lesson_role(principal, homework.lesson_id, "student")
 
     try:
         return await service.create(

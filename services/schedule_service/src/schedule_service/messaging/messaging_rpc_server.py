@@ -122,6 +122,11 @@ class ScheduleRpcServer:
                         payload=payload
                     )
 
+                elif method == "schedule.authorization.lesson_context":
+                    response = await self.get_lesson_context(
+                        payload=payload
+                    )
+
                 else:
                     response = {
                         "success": False,
@@ -180,6 +185,31 @@ class ScheduleRpcServer:
             return {
                 "success": False,
                 "error": "lesson_id is required"
+            }
+
+    async def get_lesson_context(
+        self,
+        payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Return the minimal typed lesson authorization context."""
+        try:
+            lesson_id = int(payload.get("lesson_id"))
+            if lesson_id <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            return {"success": False, "error": "lesson_id must be a positive integer"}
+
+        async with AsyncSessionLocal() as session:
+            lesson = await session.get(LessonSchedule, lesson_id)
+            if lesson is None:
+                return {"success": True, "exists": False, "lesson_id": lesson_id}
+            return {
+                "success": True,
+                "exists": True,
+                "lesson_id": lesson.id,
+                "group_id": lesson.group_id,
+                "teacher_id": lesson.teacher_id,
+                "status": self.serialize_value(lesson.status),
             }
 
         try:
