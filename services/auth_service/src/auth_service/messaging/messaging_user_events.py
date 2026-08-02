@@ -1,6 +1,7 @@
 import asyncio
 import json
 import aio_pika
+import logging
 from sqlalchemy import select
 
 from auth_service.messaging.messaging_config import rabbitmq_settings
@@ -9,6 +10,11 @@ from auth_service.models.models_auth_user import AuthUser
 from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from auth_service.repositories.repository_refresh_session import RefreshSessionRepository
 from common.security.user_state import set_user_security_state
+from common.messaging_contract import (
+    AUTH_USER_SYNC_QUEUE, USER_EVENTS_EXCHANGE, USER_EVENTS_ROUTING_KEY,
+)
+
+logger = logging.getLogger(__name__)
 
 
 async def consume_user_events_forever():
@@ -16,9 +22,10 @@ async def consume_user_events_forever():
         try:
             connection = await aio_pika.connect_robust(rabbitmq_settings.url)
             channel = await connection.channel()
-            exchange = await channel.declare_exchange("user_events", aio_pika.ExchangeType.FANOUT, durable=True)
-            queue = await channel.declare_queue("auth_user_sync", durable=True)
-            await queue.bind(exchange)
+            exchange = await channel.declare_exchange(USER_EVENTS_EXCHANGE, aio_pika.ExchangeType.FANOUT, durable=True)
+            queue = await channel.declare_queue(AUTH_USER_SYNC_QUEUE, durable=True, exclusive=False, auto_delete=False)
+            await queue.bind(exchange, routing_key=USER_EVENTS_ROUTING_KEY)
+            logger.info("user-events consumer ready exchange=%s queue=%s routing_key=%r", USER_EVENTS_EXCHANGE, AUTH_USER_SYNC_QUEUE, USER_EVENTS_ROUTING_KEY)
             async with queue.iterator() as iterator:
                 async for message in iterator:
                     async with message.process(requeue=True):
@@ -57,4 +64,5 @@ async def consume_user_events_forever():
         except asyncio.CancelledError:
             raise
         except Exception:
+            logger.exception("user-events consumer failed; retrying")
             await asyncio.sleep(5)
