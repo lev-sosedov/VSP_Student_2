@@ -1,5 +1,9 @@
 # Authorization matrix
 
+Auth session endpoints are scoped to the JWT principal. Refresh rotation uses
+families and reuse detection; access tokens are short-lived (15 minutes) and
+are not synchronously revoked by every downstream service.
+
 All HTTP services validate the RS256 access token locally. `ADMIN` is the only
 role with unrestricted administrative access. `self/admin` means the path,
 query, or body identifier must equal `CurrentPrincipal.user_id`, unless the

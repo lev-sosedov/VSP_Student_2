@@ -16,3 +16,4 @@ alembic>=1.13,<2
 asyncpg
 
 aio-pika
+redis>=6.2.0

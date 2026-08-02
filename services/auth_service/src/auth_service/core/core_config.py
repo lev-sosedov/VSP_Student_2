@@ -12,13 +12,18 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "vsp-student-api"
     JWT_CLOCK_SKEW_SECONDS: int = 30
 
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
 
     # USER_SERVICE_URL: str
     DATABASE_URL: str
 
     BCRYPT_ROUNDS: int = 12
+    REDIS_URL: str = "redis://redis:6379/0"
+    AUTH_RATE_LIMIT_LOGIN: int = 5
+    AUTH_RATE_LIMIT_REGISTER: int = 5
+    AUTH_RATE_LIMIT_REFRESH: int = 20
+    AUTH_RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     def private_key(self) -> str:
         return Path(self.JWT_PRIVATE_KEY_PATH).read_text(encoding="utf-8")
