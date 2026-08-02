@@ -7,6 +7,8 @@ COPY services/notification_service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/notification_service/src ./src
+COPY services/notification_service/alembic.ini ./alembic.ini
+COPY services/notification_service/alembic ./alembic
 COPY common/src ./common/src
 
 ENV PYTHONPATH=/service/src:/service/common/src

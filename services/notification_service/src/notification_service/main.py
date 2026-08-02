@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from common.security.middleware import JWTAuthenticationMiddleware
@@ -42,10 +43,9 @@ async def lifespan(app: FastAPI):
     # =========================
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(
-                Base.metadata.create_all
-            )
+        if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
 
         print(
             "📦 Database tables created",

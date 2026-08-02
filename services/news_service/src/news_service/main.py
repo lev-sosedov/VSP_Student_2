@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations
@@ -49,10 +50,9 @@ async def lifespan(app: FastAPI):
     # =========================
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(
-                Base.metadata.create_all
-            )
+        if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
 
         print(
             "📦 Database tables created",

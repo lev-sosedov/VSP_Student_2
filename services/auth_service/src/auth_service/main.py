@@ -9,6 +9,7 @@ from auth_service.models.models_auth_user import AuthUser
 from auth_service.messaging.messaging_rabbit import publish_user_created
 from auth_service.messaging.messaging_user_events import consume_user_events_forever
 import asyncio
+import os
 from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from common.security.middleware import JWTAuthenticationMiddleware
 
@@ -16,10 +17,9 @@ from common.security.middleware import JWTAuthenticationMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    async with engine.begin() as conn:
-        await conn.run_sync(
-            Base.metadata.create_all
-        )
+    if os.getenv("AUTO_CREATE_TABLES", "false").lower() == "true":
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     sync_task = asyncio.create_task(consume_user_events_forever())
 
