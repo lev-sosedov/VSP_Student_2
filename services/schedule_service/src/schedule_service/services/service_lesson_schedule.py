@@ -84,6 +84,7 @@ async def get_active_template(
 async def get_lessons(
     session: AsyncSession,
     group_id: int | None = None,
+    group_ids: list[int] | None = None,
     teacher_id: int | None = None,
     room_id: int | None = None,
     lesson_date_from: date | None = None,
@@ -99,6 +100,8 @@ async def get_lessons(
         filters.append(
             LessonSchedule.group_id == group_id
         )
+    elif group_ids is not None:
+        filters.append(LessonSchedule.group_id.in_(group_ids))
 
     if teacher_id is not None:
         filters.append(

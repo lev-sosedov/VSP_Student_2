@@ -26,6 +26,23 @@ async def _membership(principal: CurrentPrincipal, group_id: int, role: str) -> 
     return principal
 
 
+async def _user_groups(principal: CurrentPrincipal) -> list[int]:
+    if principal.role is RoleType.ADMIN:
+        return []
+    try:
+        response = await rabbit_rpc_client.call_academic(
+            "academic.authorization.user_groups",
+            {"user_id": principal.user_id},
+            timeout=2.0,
+        )
+        group_ids = response.get("group_ids") if isinstance(response, dict) else None
+        if response.get("success") is not True or not isinstance(group_ids, list):
+            raise ValueError("malformed group authorization response")
+        return [int(group_id) for group_id in group_ids if isinstance(group_id, int) and group_id > 0]
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Group authorization unavailable") from exc
+
+
 async def require_group_student_or_admin(
     request: Request, principal: CurrentPrincipal = Depends(get_current_principal)
 ) -> CurrentPrincipal:
@@ -36,6 +53,13 @@ async def require_group_teacher_or_admin(
     request: Request, principal: CurrentPrincipal = Depends(get_current_principal)
 ) -> CurrentPrincipal:
     return await _membership(principal, int(request.path_params["group_id"]), "teacher")
+
+
+async def require_group_member_or_admin(
+    request: Request, principal: CurrentPrincipal = Depends(get_current_principal)
+) -> CurrentPrincipal:
+    role = "teacher" if principal.role is RoleType.TEACHER else "student"
+    return await _membership(principal, int(request.path_params["group_id"]), role)
 
 
 async def require_student_self_or_admin(

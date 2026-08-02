@@ -53,6 +53,7 @@ router = APIRouter(
 async def create_attendance_endpoint(
     attendance_data: AttendanceCreate,
     session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     lesson = await get_lesson_for_attendance(
         session=session,
@@ -64,6 +65,21 @@ async def create_attendance_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Занятие не найдено",
         )
+
+    if principal.role.name != "ADMIN":
+        await _membership(principal, lesson.group_id, "teacher")
+        student_check = await rabbit_rpc_client.call_academic(
+            "academic.authorization.membership",
+            {"user_id": attendance_data.student_id, "group_id": lesson.group_id, "role": "student"},
+            timeout=2.0,
+        )
+        if (
+            not isinstance(student_check, dict)
+            or student_check.get("success") is not True
+            or student_check.get("exists") is not True
+            or student_check.get("is_active") is not True
+        ):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student is not active in lesson group")
 
     existing = (
         await get_attendance_by_lesson_and_student(
@@ -130,7 +146,20 @@ async def get_attendance_endpoint(
         le=500,
     ),
     session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role.name != "ADMIN":
+        if student_id is not None:
+            if student_id != principal.user_id:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        elif lesson_id is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Global attendance list is restricted")
+        else:
+            lesson = await get_lesson_for_attendance(session=session, lesson_id=lesson_id)
+            if lesson is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+            await _membership(principal, lesson.group_id, "teacher")
+
     records, total = await get_attendance_records(
         session=session,
         lesson_id=lesson_id,
@@ -168,12 +197,6 @@ async def get_lesson_attendance_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Занятие не найдено",
         )
-    if principal.role.name != "ADMIN":
-        await _membership(principal, lesson.group_id, "teacher")
-    if principal.role.name != "ADMIN":
-        student_check = await rabbit_rpc_client.call_academic("academic.authorization.membership", {"user_id": attendance_data.student_id, "group_id": lesson.group_id, "role": "student"}, timeout=2.0)
-        if not isinstance(student_check, dict) or student_check.get("success") is not True or student_check.get("exists") is not True:
-            raise HTTPException(status_code=403, detail="Student is not active in lesson group")
 
     records, total = await get_attendance_records(
         session=session,
