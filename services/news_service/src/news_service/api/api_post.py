@@ -3,7 +3,8 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
-    status
+    status,
+    Request
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,6 +93,7 @@ async def create_post_endpoint(
     summary="Получить список публикаций"
 )
 async def get_posts_endpoint(
+    request: Request,
     post_type: PostType | None = Query(
         default=None
     ),
@@ -130,6 +132,13 @@ async def get_posts_endpoint(
     service = PostService(
         session=session
     )
+
+    # The collection endpoint is public for the website, but public callers
+    # must never be able to select drafts or administrative states.
+    if not hasattr(request.state, "current_principal"):
+        post_status = PostStatus.PUBLISHED
+        is_active = True
+        created_by = None
 
     posts, total = await service.get_list(
         post_type=post_type,
