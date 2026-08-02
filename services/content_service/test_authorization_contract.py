@@ -36,3 +36,15 @@ def test_collections_filter_by_principal_groups_without_resource_context():
     assert "filter_lesson_collection" in homework and "filter_lesson_collection" in contents
     assert "filter_submission_collection" in submissions
     assert "Resource context is required" not in auth
+
+
+def test_teacher_collections_keep_completed_lessons_and_orphans_are_skipped():
+    source = Path("services/content_service/src/content_service/api/authorization.py").read_text(encoding="utf-8")
+    assert "principal.role is RoleType.STUDENT" in source
+    assert "exc.status_code == status.HTTP_404_NOT_FOUND" in source
+    assert "if published and principal.role is RoleType.STUDENT" in source
+
+
+def test_collection_rpc_failures_are_not_masked_as_empty_results():
+    source = Path("services/content_service/src/content_service/api/authorization.py").read_text(encoding="utf-8")
+    assert "raise\n        if context.get(\"group_id\")" in source
