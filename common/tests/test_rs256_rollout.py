@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 import jwt
@@ -123,6 +124,54 @@ def test_middleware_public_and_protected_statuses(monkeypatch, rsa_pair):
     client = TestClient(app)
     assert client.get("/public").status_code == 200
     assert client.get("/protected").status_code == 401
+
+
+def test_infrastructure_probes_are_exactly_public(monkeypatch, rsa_pair):
+    app = FastAPI()
+    app.add_middleware(JWTAuthenticationMiddleware)
+
+    @app.get("/health")
+    async def health():
+        return {"status": "ok"}
+
+    @app.get("/ready")
+    async def ready():
+        return {"status": "ready"}
+
+    @app.get("/ready/test")
+    async def ready_test():
+        return {"status": "test"}
+
+    @app.get("/readiness")
+    async def readiness():
+        return {"status": "wrong"}
+
+    @app.get("/health/private")
+    async def private_health():
+        return {"status": "wrong"}
+
+    configured_provider = lambda: provider(rsa_pair[1])
+    monkeypatch.setattr("common.security.middleware.get_jwt_provider", configured_provider)
+    monkeypatch.setattr("common.security.dependencies.get_jwt_provider", configured_provider)
+    client = TestClient(app)
+    assert client.get("/health").status_code == 200
+    assert client.get("/ready").status_code == 200
+    assert client.get("/ready/test").status_code == 401
+    assert client.get("/readiness").status_code == 401
+    assert client.get("/health/private").status_code == 401
+
+
+def test_ready_response_uses_503_without_revealing_configuration(monkeypatch):
+    from common.readiness import database_readiness
+
+    class BrokenEngine:
+        def connect(self):
+            raise RuntimeError("database secret should not escape")
+
+    response = asyncio.run(database_readiness(BrokenEngine(), ("users",), {"rabbitmq": False}))
+    assert response.status_code == 503
+    assert b"secret" not in response.body.lower()
+    assert b"password" not in response.body.lower()
 
 
 def test_role_dependency_returns_forbidden_for_wrong_role(rsa_pair, monkeypatch):

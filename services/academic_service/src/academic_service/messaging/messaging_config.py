@@ -2,9 +2,10 @@ from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict
 )
+from common.rabbitmq_settings import RabbitMQSettingsMixin
 
 
-class RabbitMQSettings(BaseSettings):
+class RabbitMQSettings(RabbitMQSettingsMixin, BaseSettings):
     host: str = "rabbitmq"
     port: int = 5672
 
@@ -30,6 +31,7 @@ class RabbitMQSettings(BaseSettings):
     prefetch_count: int = 10
     reconnect_interval: int = 5
     heartbeat: int = 60
+    connection_timeout_seconds: float = 10.0
 
     durable: bool = True
     mandatory: bool = False
@@ -39,16 +41,6 @@ class RabbitMQSettings(BaseSettings):
         env_prefix="RABBITMQ_",
         extra="ignore"
     )
-
-    @property
-    def url(self) -> str:
-        return (
-            f"amqp://{self.username}:"
-            f"{self.password}@"
-            f"{self.host}:"
-            f"{self.port}/"
-        )
-
 
 rabbitmq_settings = RabbitMQSettings()
 
