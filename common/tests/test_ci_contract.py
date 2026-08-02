@@ -12,6 +12,7 @@ def test_backend_workflow_has_safe_triggers_and_jobs():
     assert "tests:" in workflow
     assert "alembic:" in workflow
     assert "docker-build:" in workflow
+    assert "production-validation:" in workflow
     assert "docker push" not in workflow
     assert "docker compose down" not in workflow
 

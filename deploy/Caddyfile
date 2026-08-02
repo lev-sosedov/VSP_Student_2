@@ -1,0 +1,37 @@
+{
+    email {$CADDY_EMAIL}
+}
+
+https://vsp-student.ru {
+    encode gzip zstd
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+    handle /docs {
+        respond 404
+    }
+    handle /openapi.json {
+        respond 404
+    }
+    @health path /health
+    handle @health {
+        respond "ok" 200
+    }
+    handle /api/* {
+        reverse_proxy api-gateway:8080
+    }
+    handle /ws/* {
+        reverse_proxy communication-service:8006
+    }
+    handle {
+        reverse_proxy frontend:80
+    }
+}
+
+https://www.vsp-student.ru {
+    redir https://vsp-student.ru{uri} permanent
+}

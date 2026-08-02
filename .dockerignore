@@ -3,7 +3,9 @@
 .idea
 .vscode
 .env
+.env.production
 **/.env
+**/.env.production
 *.pem
 *.key
 secrets/

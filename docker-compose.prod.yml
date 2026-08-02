@@ -1,36 +1,269 @@
-# Production override. Use explicitly so docker-compose.override.yml is not loaded:
-# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+name: vsp_student_2_prod
+
+x-app: &app
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  networks: [backend, data]
+
+x-health: &health
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 20s
+
+x-rabbit: &rabbit
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+  RABBITMQ_VIRTUAL_HOST: ${RABBITMQ_VIRTUAL_HOST:-/}
+
+x-redis: &redis
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379/0
+
+x-jwt: &jwt
+  JWT_ALGORITHM: RS256
+  JWT_ISSUER: ${JWT_ISSUER:?Set JWT_ISSUER}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:?Set JWT_AUDIENCE}
+  JWT_CLOCK_SKEW_SECONDS: ${JWT_CLOCK_SKEW_SECONDS:-30}
+  JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key.pem
+
+x-deps: &deps
+  postgres: {condition: service_healthy}
+  rabbitmq: {condition: service_healthy}
+  redis: {condition: service_healthy}
+
 services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    networks: [edge, backend]
+    environment:
+      CADDY_EMAIL: ${CADDY_EMAIL:?Set CADDY_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      <<: *health
+    depends_on:
+      frontend: {condition: service_healthy}
+      api-gateway: {condition: service_healthy}
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-vsp-frontend:local}
+    restart: unless-stopped
+    networks: [edge]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=16m,mode=1777
+      - /var/run:size=1m,mode=1777
+      - /var/log/nginx:size=8m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      <<: *health
+
   api-gateway:
+    <<: *app
+    networks: [edge, backend]
+    build: {context: ., dockerfile: services/api_gateway/Dockerfile}
     environment:
       APP_ENV: production
+      ENVIRONMENT: production
       DEBUG: "false"
-      CORS_ORIGINS: ${CORS_ORIGINS:?Set the production HTTPS origin in .env}
-    ports:
-      # Nginx/Caddy on the host proxies to this localhost-only port.
-      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set production CORS_ORIGINS}
+      AUTH_SERVICE_URL: http://auth-service:8000
+      USER_SERVICE_URL: http://user-service:8001
+      ACADEMIC_SERVICE_URL: http://academic-service:8002
+      SCHEDULE_SERVICE_URL: http://schedule-service:8003
+      CONTENT_SERVICE_URL: http://content-service:8004
+      NOTIFICATION_SERVICE_URL: http://notification-service:8005
+      COMMUNICATION_SERVICE_URL: http://communication-service:8006
+      NEWS_SERVICE_URL: http://news-service:8007
+    expose: ["8080"]
+    depends_on: *deps
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      <<: *health
 
   auth-service:
+    <<: *app
+    build: {context: ., dockerfile: services/auth_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${AUTH_DB_NAME:?Set AUTH_DB_NAME}
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key.pem
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-14}
+    volumes:
+      - ${JWT_PRIVATE_KEY_HOST_PATH:?Set JWT_PRIVATE_KEY_HOST_PATH}:/run/secrets/jwt_private_key.pem:ro
+      - ${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro
+    expose: ["8000"]
+    depends_on: *deps
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      <<: *health
+
   user-service:
+    <<: *app
+    build: {context: ., dockerfile: services/user_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${USER_DB_NAME:?Set USER_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8001"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"], <<: *health}
+
   academic-service:
+    <<: *app
+    build: {context: ., dockerfile: services/academic_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${ACADEMIC_DB_NAME:?Set ACADEMIC_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8002"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=3)"], <<: *health}
+
   schedule-service:
+    <<: *app
+    build: {context: ., dockerfile: services/schedule_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${SCHEDULE_DB_NAME:?Set SCHEDULE_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8003"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=3)"], <<: *health}
+
   content-service:
+    <<: *app
+    build: {context: ., dockerfile: services/content_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${CONTENT_DB_NAME:?Set CONTENT_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8004"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health', timeout=3)"], <<: *health}
+
   notification-service:
+    <<: *app
+    build: {context: ., dockerfile: services/notification_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${NOTIFICATION_DB_NAME:?Set NOTIFICATION_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8005"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8005/health', timeout=3)"], <<: *health}
+
   communication-service:
+    <<: *app
+    build: {context: ., dockerfile: services/communication_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${COMMUNICATION_DB_NAME:?Set COMMUNICATION_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8006"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8006/health', timeout=3)"], <<: *health}
+
   news-service:
+    <<: *app
+    build: {context: ., dockerfile: services/news_service/Dockerfile}
     environment:
+      <<: [*rabbit, *redis, *jwt]
+      APP_ENV: production
       ENVIRONMENT: production
+      AUTO_CREATE_TABLES: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${NEWS_DB_NAME:?Set NEWS_DB_NAME}
+    volumes:
+      - "${JWT_PUBLIC_KEY_HOST_PATH:?Set JWT_PUBLIC_KEY_HOST_PATH}:/run/secrets/jwt_public_key.pem:ro"
+    expose: ["8007"]
+    depends_on: *deps
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8007/health', timeout=3)"], <<: *health}
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    networks: [data]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vsp}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], <<: *health}
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    networks: [data]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VIRTUAL_HOST:-/}
+    volumes: [rabbitmq_data:/var/lib/rabbitmq]
+    healthcheck: {test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], <<: *health}
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    networks: [data]
+    command: [redis-server, --appendonly, "yes", --requirepass, "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"
+    volumes: [redis_data:/data]
+    healthcheck: {test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"], <<: *health}
+
+networks:
+  edge: {name: vsp_edge, driver: bridge}
+  backend: {name: vsp_backend, driver: bridge, internal: true}
+  data: {name: vsp_data, driver: bridge, internal: true}
+
+volumes:
+  postgres_data: {name: vsp_student_2_postgres_data}
+  rabbitmq_data: {name: vsp_student_2_rabbitmq_data}
+  redis_data: {name: vsp_student_2_redis_data}
+  caddy_data: {name: vsp_student_2_caddy_data}
+  caddy_config: {name: vsp_student_2_caddy_config}
