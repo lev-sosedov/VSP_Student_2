@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from communication_service.db import db_init_models
 from communication_service.db.db_base import Base
@@ -337,3 +338,8 @@ async def health():
             communication_event_publisher.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("chats", "chat_members", "messages"), {"rabbitmq": True, "redis": True})

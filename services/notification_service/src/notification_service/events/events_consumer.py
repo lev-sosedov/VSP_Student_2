@@ -2,6 +2,10 @@ import asyncio
 import json
 
 import aio_pika
+from common.messaging_contract import EventContractError, parse_event_envelope
+from common.messaging_reliability import RetryPolicy, declare_dlx, dead_letter, retry_or_dead_letter
+from notification_service.models.model_processed_event import ProcessedEvent
+from sqlalchemy import select
 
 from notification_service.db.db_session import (
     AsyncSessionLocal
@@ -37,6 +41,8 @@ class NotificationEventConsumer:
 
         self.started: bool = False
         self._stopping: bool = False
+        self._channel = None
+        self.retry_policy = RetryPolicy(max_attempts=3, base_delay_seconds=1, max_delay_seconds=15)
 
     # =================================================
     # START
@@ -53,6 +59,7 @@ class NotificationEventConsumer:
                 channel = (
                     await RabbitConnection.get_channel()
                 )
+                self._channel = channel
 
                 exchange = (
                     await channel.declare_exchange(
@@ -69,9 +76,12 @@ class NotificationEventConsumer:
                 self.queue = (
                     await channel.declare_queue(
                         rabbitmq_settings.queue,
-                        durable=True
+                        durable=True,
+                        exclusive=False,
+                        auto_delete=False,
                     )
                 )
+                await declare_dlx(channel, rabbitmq_settings.queue)
 
                 routing_keys = [
                     # =============================
@@ -149,94 +159,43 @@ class NotificationEventConsumer:
         self,
         message: aio_pika.IncomingMessage
     ) -> None:
-        async with message.process(
-            requeue=False
-        ):
+        try:
             try:
-                event = json.loads(
-                    message.body.decode("utf-8")
-                )
+                envelope = parse_event_envelope(message.body)
+                event_type = envelope.event_type
+                payload = envelope.payload
+                event_id = str(envelope.event_id)
+                producer = envelope.producer
+            except EventContractError:
+                # Compatibility for messages emitted immediately before the
+                # envelope rollout; malformed messages are DLQ'd below.
+                event = json.loads(message.body.decode("utf-8"))
+                event_type = event.get("event") or event.get("event_type") or message.routing_key
+                payload = event.get("data") or event.get("payload") or {}
+                event_id = str(event.get("event_id", ""))
+                producer = str(event.get("service", "legacy"))
+                if not event_id or not isinstance(payload, dict):
+                    raise EventContractError("malformed event envelope")
 
-                event_type = (
-                    event.get("event")
-                    or message.routing_key
-                )
+            async with AsyncSessionLocal() as session:
+                seen = await session.scalar(select(ProcessedEvent).where(ProcessedEvent.event_id == event_id))
+                if seen:
+                    await message.ack()
+                    return
 
-                payload = event.get("data")
+                service = NotificationService(session=session)
 
-                if payload is None:
-                    payload = event.get(
-                        "payload",
-                        {}
-                    )
+                if event_type.startswith("content."):
+                    await content_event_handler.handle(event_type=event_type, payload=payload, service=service)
+                elif event_type.startswith("schedule."):
+                    await schedule_event_handler.handle(event_type=event_type, payload=payload, service=service)
+                elif event_type.startswith("communication."):
+                    await communication_event_handler.handle(event_type=event_type, payload=payload, service=service)
+                elif event_type.startswith("news."):
+                    await news_event_handler.handle(event_type=event_type, payload=payload, service=service)
 
-                if not isinstance(payload, dict):
-                    raise ValueError(
-                        "Event payload must be an object"
-                    )
-
-                async with AsyncSessionLocal() as session:
-                    service = NotificationService(
-                        session=session
-                    )
-
-                    if event_type.startswith(
-                        "content."
-                    ):
-                        await (
-                            content_event_handler
-                            .handle(
-                                event_type=event_type,
-                                payload=payload,
-                                service=service
-                            )
-                        )
-
-                    elif event_type.startswith(
-                        "schedule."
-                    ):
-                        await (
-                            schedule_event_handler
-                            .handle(
-                                event_type=event_type,
-                                payload=payload,
-                                service=service
-                            )
-                        )
-
-                    elif event_type.startswith(
-                        "communication."
-                    ):
-                        await (
-                            communication_event_handler
-                            .handle(
-                                event_type=event_type,
-                                payload=payload,
-                                service=service
-                            )
-                        )
-
-                    elif event_type.startswith(
-                        "news."
-                    ):
-                        await (
-                            news_event_handler
-                            .handle(
-                                event_type=event_type,
-                                payload=payload,
-                                service=service
-                            )
-                        )
-
-                    else:
-                        print(
-                            "[Notification Events] "
-                            "Unsupported event: "
-                            f"{event_type}",
-                            flush=True
-                        )
-
-                    await session.commit()
+                session.add(ProcessedEvent(event_id=event_id, event_type=event_type, producer=producer))
+                await session.commit()
 
                 print(
                     "[Notification Events] "
@@ -244,14 +203,15 @@ class NotificationEventConsumer:
                     flush=True
                 )
 
-            except Exception as error:
-                print(
-                    "[Notification Events] "
-                    f"Processing failed: {error}",
-                    flush=True
-                )
+            await message.ack()
 
-                raise
+        except EventContractError:
+            if self._channel is not None:
+                await dead_letter(self._channel, message, queue_name=rabbitmq_settings.queue, reason="malformed_event")
+        except Exception as error:
+            print("[Notification Events] Processing failed", flush=True)
+            if self._channel is not None:
+                await retry_or_dead_letter(self._channel, message, queue_name=rabbitmq_settings.queue, policy=self.retry_policy, reason=type(error).__name__)
 
     # =================================================
     # STOP
@@ -261,6 +221,7 @@ class NotificationEventConsumer:
         self._stopping = True
         self.started = False
         self.queue = None
+        self._channel = None
 
         print(
             "[Notification Events] "

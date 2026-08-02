@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from academic_service.api.api_branch import (
     router as branch_router
@@ -345,3 +346,8 @@ async def health():
         "service": "academic-service",
         "status": "ok"
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("groups",), {"rabbitmq": True})

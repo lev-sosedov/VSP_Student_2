@@ -95,6 +95,20 @@ def main() -> int:
     if "AUTO_CREATE_TABLES=" not in example:
         errors.append(".env.example must define AUTO_CREATE_TABLES")
 
+    contract = ROOT / "common" / "src" / "common" / "messaging_contract.py"
+    contract_text = contract.read_text(encoding="utf-8")
+    for required in ("EventEnvelope", "event_id", "event_version", "correlation_id", "parse_event_envelope"):
+        if required not in contract_text:
+            errors.append(f"messaging contract missing {required}")
+
+    reliability = ROOT / "common" / "src" / "common" / "messaging_reliability.py"
+    if not reliability.exists():
+        errors.append("missing common RabbitMQ reliability utilities")
+    for service in ("auth_service", "user_service", "academic_service", "communication_service", "notification_service"):
+        main_path = ROOT / "services" / service / "src" / service / "main.py"
+        if main_path.exists() and "/ready" not in main_path.read_text(encoding="utf-8"):
+            errors.append(f"missing /ready route: {service}")
+
     for file_name in files:
         path = ROOT / file_name
         if not path.exists():

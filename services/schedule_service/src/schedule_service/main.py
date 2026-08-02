@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations, require_teacher_or_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from schedule_service.api.api_lesson_generation import (
     router as lesson_generation_router
@@ -323,3 +324,8 @@ async def health():
             schedule_event_publisher.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("lesson_schedules", "attendance"), {"rabbitmq": True, "redis": True})

@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI
 from common.security.rbac import require_content_mutation
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from content_service.api.api_lesson_content import (
     router as lesson_content_router
@@ -302,3 +303,8 @@ async def health():
             content_event_publisher.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("homeworks", "lesson_contents"), {"rabbitmq": True, "redis": True})

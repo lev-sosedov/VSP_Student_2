@@ -19,3 +19,6 @@ class UserEventOutbox(Base):
     auth_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     payload: Mapped[str] = mapped_column(Text, nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)

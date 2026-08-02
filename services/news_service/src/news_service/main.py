@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from news_service.db import db_init_models
 from news_service.db.db_base import Base
@@ -289,3 +290,8 @@ async def health():
             news_event_publisher.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("posts",), {"rabbitmq": True, "redis": True})

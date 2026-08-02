@@ -12,7 +12,9 @@ def test_user_event_contract_matches_publisher_and_consumer():
     assert "durable=True" in auth
     assert "exclusive=False" in auth
     assert "auto_delete=False" in auth
-    assert "message.process(requeue=True)" in auth
+    assert "await message.ack()" in auth
+    assert "retry_or_dead_letter" in auth
+    assert "dead_letter" in auth
     assert "await session.commit()" in auth
 
 
@@ -22,4 +24,4 @@ def test_activation_event_restores_auth_state_and_rotates_version():
     assert 'event_type == "user.activated"' in auth
     assert '"user.activated"' in user
     assert 'user.is_active = True' in auth
-    assert 'event_type in {"user.role.changed", "user.blocked", "user.deleted", "user.activated"}' in auth
+    assert 'event_type in {"user.role.changed", "user.blocked", "user.deleted", "user.activated", "user.password.changed"}' in auth
