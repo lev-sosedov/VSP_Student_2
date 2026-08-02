@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+import asyncio
 import os
 
 from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations, require_teacher_or_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from schedule_service.api.api_lesson_generation import (
     router as lesson_generation_router
@@ -33,6 +35,10 @@ from schedule_service.messaging.messaging_rpc_client import (
 from schedule_service.messaging.messaging_rpc_server import (
     schedule_rpc_server
 )
+from schedule_service.db.db_session import AsyncSessionLocal
+from schedule_service.models.model_event_outbox import EventOutbox
+from schedule_service.messaging.messaging_config import rabbitmq_settings
+from common.outbox_worker import OutboxWorker
 from schedule_service.messaging.messaging_event_publisher import (
     schedule_event_publisher
 )
@@ -42,6 +48,7 @@ from schedule_service.api.api_attendance import (
 
 
 API_PREFIX = "/api/v1"
+outbox_worker: OutboxWorker | None = None
 
 
 # =====================================================
@@ -50,6 +57,9 @@ API_PREFIX = "/api/v1"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global outbox_worker
+    outbox_worker = OutboxWorker(session_factory=AsyncSessionLocal, model=EventOutbox, exchange_name=rabbitmq_settings.exchange, producer="schedule-service", url=rabbitmq_settings.url)
+    outbox_task = asyncio.create_task(outbox_worker.run_forever())
     print(
         "🚀 Starting Schedule Service...",
         flush=True
@@ -141,6 +151,8 @@ async def lifespan(app: FastAPI):
     )
 
     yield
+    await outbox_worker.stop()
+    outbox_task.cancel()
 
     # =========================
     # Graceful shutdown
@@ -155,6 +167,10 @@ async def lifespan(app: FastAPI):
     # Stop event publisher
     # =========================
 
+    try:
+        await outbox_task
+    except asyncio.CancelledError:
+        pass
     try:
         await schedule_event_publisher.stop()
 
@@ -323,3 +339,8 @@ async def health():
             schedule_event_publisher.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("lesson_schedules", "attendance"), {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis", "outbox_worker": bool(outbox_worker and outbox_worker.started)})

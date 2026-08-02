@@ -1,6 +1,8 @@
 import json
 
 import aio_pika
+from common.messaging_contract import EventContractError, parse_event_envelope
+from common.messaging_reliability import RetryPolicy, declare_dlx, dead_letter, retry_or_dead_letter
 
 from communication_service.core.core_config import settings
 from communication_service.db.db_session import AsyncSessionLocal
@@ -11,6 +13,8 @@ from communication_service.messaging.messaging_rabbit import (
     RabbitConnection
 )
 from communication_service.services.service_chat import ChatService
+from communication_service.models.model_processed_event import ProcessedEvent
+from sqlalchemy import select
 
 
 class AcademicEventConsumer:
@@ -18,6 +22,7 @@ class AcademicEventConsumer:
         self.queue: aio_pika.RobustQueue | None = None
         self.consumer_tag: str | None = None
         self.started = False
+        self.retry_policy = RetryPolicy(max_attempts=3)
 
     async def start(self) -> None:
         if self.started:
@@ -33,8 +38,11 @@ class AcademicEventConsumer:
 
         self.queue = await channel.declare_queue(
             rabbitmq_settings.academic_events_queue,
-            durable=rabbitmq_settings.durable
+            durable=rabbitmq_settings.durable,
+            exclusive=False,
+            auto_delete=False,
         )
+        await declare_dlx(channel, rabbitmq_settings.academic_events_queue)
 
         await self.queue.bind(
             exchange,
@@ -60,31 +68,12 @@ class AcademicEventConsumer:
         self,
         message: aio_pika.IncomingMessage
     ) -> None:
-        async with message.process(requeue=True):
-            try:
-                event = json.loads(
-                    message.body.decode("utf-8")
-                )
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                print(
-                    "[Communication Events] "
-                    "Invalid academic event skipped",
-                    flush=True
-                )
+        try:
+            envelope = parse_event_envelope(message.body)
+            if envelope.event_type != rabbitmq_settings.academic_member_added_routing_key:
+                await message.ack()
                 return
-
-            if (
-                event.get("event")
-                != rabbitmq_settings
-                .academic_member_added_routing_key
-            ):
-                return
-
-            payload = (
-                event.get("payload")
-                or event.get("data")
-                or {}
-            )
+            payload = envelope.payload
 
             group_id = int(
                 payload.get("group_id", 0)
@@ -110,6 +99,10 @@ class AcademicEventConsumer:
 
             async with AsyncSessionLocal() as session:
                 try:
+                    seen = await session.scalar(select(ProcessedEvent).where(ProcessedEvent.event_id == str(envelope.event_id)))
+                    if seen:
+                        await message.ack()
+                        return
                     service = ChatService(
                         session=session
                     )
@@ -126,11 +119,24 @@ class AcademicEventConsumer:
                             admin_id=settings.ADMIN_USER_ID
                         )
 
+                    session.add(ProcessedEvent(
+                        event_id=str(envelope.event_id),
+                        event_type=envelope.event_type,
+                        producer=envelope.producer,
+                    ))
+
                     await session.commit()
 
                 except Exception:
                     await session.rollback()
                     raise
+            await message.ack()
+        except EventContractError:
+            channel = await RabbitConnection.get_channel()
+            await dead_letter(channel, message, queue_name=rabbitmq_settings.academic_events_queue, reason="malformed_event")
+        except Exception as exc:
+            channel = await RabbitConnection.get_channel()
+            await retry_or_dead_letter(channel, message, queue_name=rabbitmq_settings.academic_events_queue, policy=self.retry_policy, reason=type(exc).__name__)
 
     async def stop(self) -> None:
         if (

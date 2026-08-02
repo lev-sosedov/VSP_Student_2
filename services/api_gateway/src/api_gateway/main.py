@@ -74,3 +74,8 @@ async def root() -> dict[str, str]:
         "public_api": "/api/v1",
         "technical_proxy": "/api/gateway",
     }
+
+
+@app.get("/ready", tags=["Gateway"])
+async def ready() -> dict[str, str]:
+    return {"status": "ready"}

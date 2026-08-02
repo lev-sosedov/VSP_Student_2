@@ -19,6 +19,7 @@ from user_service.messaging.messaging_outbox import publish_outbox_forever
 from user_service.messaging.messaging_rpc_server import user_rpc_server
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 
 
@@ -193,6 +194,11 @@ async def health_check():
         "service": "user-service",
         "status": "ok"
     }
+
+
+@app.get("/ready", tags=["System"])
+async def ready_check():
+    return await database_readiness(engine, ("users", "user_event_outbox"), {"rabbitmq": "probe-rabbitmq"})
 
 
 @app.get(

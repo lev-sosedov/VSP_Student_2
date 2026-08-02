@@ -13,6 +13,7 @@ import os
 from auth_service.models.models_processed_user_event import ProcessedUserEvent
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 
 @asynccontextmanager
@@ -111,3 +112,8 @@ async def health_check():
         "service": "auth-service",
         "status": "ok"
     }
+
+
+@app.get("/ready", tags=["System"])
+async def ready_check():
+    return await database_readiness(engine, ("auth_users", "refresh_sessions", "processed_user_events"), {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis"})

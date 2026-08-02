@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from schedule_service.db.db_base import Base
+from schedule_service.models.model_event_outbox import EventOutbox  # noqa: F401
 from schedule_service.db import db_init_models  # noqa: F401
 config = context.config
 if config.config_file_name is not None: fileConfig(config.config_file_name)

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from academic_service.core.core_config import settings
+from common.outbox_context import bind_session, unbind_session
 
 
 # =========================
@@ -36,6 +37,7 @@ AsyncSessionLocal = async_sessionmaker(
 # =========================
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
+        token = bind_session(session)
         try:
             yield session
             await session.commit()
@@ -43,4 +45,5 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             await session.rollback()
             raise
         finally:
+            unbind_session(token)
             await session.close()

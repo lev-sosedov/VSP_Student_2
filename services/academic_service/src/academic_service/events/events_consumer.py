@@ -1,6 +1,6 @@
-import json
-
 from aio_pika import IncomingMessage
+from common.messaging_contract import EventContractError, parse_event_envelope
+from common.messaging_reliability import dead_letter, retry_or_dead_letter, RetryPolicy
 
 from academic_service.messaging.messaging_consumer import RabbitConsumer
 from academic_service.messaging.messaging_config import (
@@ -18,6 +18,7 @@ class AcademicConsumer(RabbitConsumer):
             queue_name=ACADEMIC_QUEUE,
             routing_keys=ACADEMIC_ROUTING_KEYS
         )
+        self.retry_policy = RetryPolicy(max_attempts=3)
 
     # =====================================================
     # Обработка входящего сообщения
@@ -28,28 +29,16 @@ class AcademicConsumer(RabbitConsumer):
         message: IncomingMessage
     ):
 
-        async with message.process():
-
-            try:
-
-                data = json.loads(message.body.decode())
-
-                event = data.get("event")
-                payload = data.get("payload", {})
-
-                print(f"[Academic] Event: {event}")
-
-                await handlers.handle(
-                    event=event,
-                    payload=payload
-                )
-
-            except Exception as e:
-
-                print(
-                    "[Academic] Error processing message:",
-                    e
-                )
+        try:
+            envelope = parse_event_envelope(message.body)
+            await handlers.handle(event=envelope.event_type, payload=envelope.payload)
+            await message.ack()
+        except EventContractError:
+            if self.channel is not None:
+                await dead_letter(self.channel, message, queue_name=self.queue_name, reason="malformed_event")
+        except Exception as exc:
+            if self.channel is not None:
+                await retry_or_dead_letter(self.channel, message, queue_name=self.queue_name, policy=self.retry_policy, reason=type(exc).__name__)
 
 
 academic_consumer = AcademicConsumer()

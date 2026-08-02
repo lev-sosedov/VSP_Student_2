@@ -5,6 +5,12 @@ from typing import Any
 from uuid import UUID
 
 import aio_pika
+import json
+from uuid import uuid4
+from common.messaging_contract import EventEnvelope
+from common.messaging_reliability import event_message, publish_confirmed
+from common.outbox_context import current_session
+from schedule_service.models.model_event_outbox import EventOutbox
 
 from schedule_service.messaging.messaging_config import (
     rabbitmq_settings
@@ -76,6 +82,10 @@ class ScheduleEventPublisher:
         routing_key: str,
         payload: dict[str, Any]
     ) -> None:
+        session = current_session.get()
+        if session is not None:
+            session.add(EventOutbox(event_id=str(uuid4()), event_type=routing_key, producer="schedule-service", payload=json.dumps(payload, default=str)))
+            return
         if not self.started:
             await self.start()
 
@@ -84,32 +94,8 @@ class ScheduleEventPublisher:
                 "RabbitMQ exchange is not initialized"
             )
 
-        event = {
-            "event": routing_key,
-            "service": "schedule-service",
-            "occurred_at": datetime.utcnow().isoformat(),
-            "data": payload
-        }
-
-        message = aio_pika.Message(
-            body=json.dumps(
-                event,
-                ensure_ascii=False,
-                default=json_default
-            ).encode("utf-8"),
-            content_type="application/json",
-            delivery_mode=(
-                aio_pika.DeliveryMode.PERSISTENT
-                if rabbitmq_settings.persistent_messages
-                else aio_pika.DeliveryMode.NOT_PERSISTENT
-            )
-        )
-
-        await self.exchange.publish(
-            message=message,
-            routing_key=routing_key,
-            mandatory=rabbitmq_settings.mandatory
-        )
+        envelope = EventEnvelope.create(event_type=routing_key, producer="schedule-service", payload=payload)
+        await publish_confirmed(self.exchange, event_message(envelope, persistent=rabbitmq_settings.persistent_messages), routing_key=routing_key, mandatory=rabbitmq_settings.mandatory)
 
     # =================================================
     # STOP

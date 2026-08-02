@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+import asyncio
 import os
 
 from fastapi import Depends, FastAPI
 from common.security.rbac import require_admin_mutations
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from academic_service.api.api_branch import (
     router as branch_router
@@ -45,9 +47,14 @@ from academic_service.messaging.messaging_rpc_client import (
 from academic_service.messaging.messaging_rpc_server import (
     academic_rpc_server
 )
+from academic_service.db.db_session import AsyncSessionLocal
+from academic_service.models.model_event_outbox import EventOutbox
+from academic_service.messaging.messaging_config import rabbitmq_settings
+from common.outbox_worker import OutboxWorker
 
 
 API_PREFIX = "/api/v1"
+outbox_worker: OutboxWorker | None = None
 
 
 # =====================================================
@@ -56,6 +63,9 @@ API_PREFIX = "/api/v1"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global outbox_worker
+    outbox_worker = OutboxWorker(session_factory=AsyncSessionLocal, model=EventOutbox, exchange_name=rabbitmq_settings.exchange, producer="academic-service", url=rabbitmq_settings.url)
+    outbox_task = asyncio.create_task(outbox_worker.run_forever())
     print(
         "🚀 Starting Academic Service...",
         flush=True
@@ -149,6 +159,8 @@ async def lifespan(app: FastAPI):
 
     # После yield приложение работает.
     yield
+    await outbox_worker.stop()
+    outbox_task.cancel()
 
     # =================================================
     # Graceful shutdown
@@ -163,6 +175,10 @@ async def lifespan(app: FastAPI):
     # Stop Academic RPC server
     # =========================
 
+    try:
+        await outbox_task
+    except asyncio.CancelledError:
+        pass
     try:
         await academic_rpc_server.stop()
 
@@ -345,3 +361,8 @@ async def health():
         "service": "academic-service",
         "status": "ok"
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("groups",), {"rabbitmq": "probe-rabbitmq", "outbox_worker": bool(outbox_worker and outbox_worker.started)})

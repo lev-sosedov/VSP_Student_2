@@ -4,6 +4,7 @@ import os
 from fastapi import FastAPI
 from common.security.middleware import JWTAuthenticationMiddleware
 from common.db_readiness import require_schema_table
+from common.readiness import database_readiness
 
 from notification_service.db import db_init_models
 from notification_service.db.db_base import Base
@@ -255,3 +256,8 @@ async def health():
             notification_event_consumer.started
         )
     }
+
+
+@app.get("/ready")
+async def ready():
+    return await database_readiness(engine, ("notifications",), {"rabbitmq": "probe-rabbitmq", "consumer": notification_event_consumer.started})
