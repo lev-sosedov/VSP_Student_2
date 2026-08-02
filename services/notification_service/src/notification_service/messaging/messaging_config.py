@@ -1,7 +1,9 @@
 import os
+from common.rabbitmq_settings import RabbitMQSettingsMixin
 
 
-class RabbitMQSettings:
+class RabbitMQSettings(RabbitMQSettingsMixin):
+    connection_timeout_seconds: float = float(os.getenv("RABBITMQ_CONNECTION_TIMEOUT_SECONDS", "10"))
     host: str = os.getenv(
         "RABBITMQ_HOST",
         "rabbitmq"
