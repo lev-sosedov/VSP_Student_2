@@ -8,10 +8,9 @@ it cannot change an existing queue's arguments.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 import aio_pika
 

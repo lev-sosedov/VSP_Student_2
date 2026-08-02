@@ -5,7 +5,6 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 import aio_pika
 from sqlalchemy import select

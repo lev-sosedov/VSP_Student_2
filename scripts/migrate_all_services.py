@@ -27,6 +27,15 @@ SERVICES = {
 def run(service: str, args: list[str], *, apply: bool = False) -> None:
     directory = SERVICES[service]
     env = os.environ.copy()
+    # Alembic loads service metadata in a subprocess; make the same source
+    # roots available whether this script is run locally or in CI.
+    source_roots = [ROOT / "common" / "src"] + [
+        ROOT / "services" / name / "src" for name in SERVICES
+    ]
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = os.pathsep.join(str(path) for path in source_roots) + (
+        os.pathsep + existing_pythonpath if existing_pythonpath else ""
+    )
     if apply:
         key = f"DATABASE_URL_{service.upper()}"
         url = env.get(key)
