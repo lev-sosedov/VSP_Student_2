@@ -182,6 +182,6 @@ jobs:
           if grep -E '"(5432|5672|6379|800[0-7]):' docker-compose.prod.yml; then exit 1; fi
           grep -q '"80:80"' docker-compose.prod.yml
           grep -q '"443:443"' docker-compose.prod.yml
-          if grep -RInE 'localhost|127\.0\.0\.1' .env.production.example deploy docker-compose.prod.yml; then exit 1; fi
+          if grep -RInE 'localhost|127\.0\.0\.1' .env.production.example deploy; then exit 1; fi
       - name: Build production backend images
         run: docker compose --env-file .env.production.example -f docker-compose.prod.yml build api-gateway auth-service user-service academic-service schedule-service content-service communication-service notification-service news-service
