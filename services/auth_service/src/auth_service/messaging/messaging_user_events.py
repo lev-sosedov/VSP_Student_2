@@ -44,9 +44,11 @@ async def consume_user_events_forever():
                                     event_type = event.get("event_type")
                                     if event_type == "user.role.changed" and event.get("role"):
                                         user.role = event["role"]
+                                    if event_type == "user.activated":
+                                        user.is_active = True
                                     if event_type in {"user.blocked", "user.deleted"}:
                                         user.is_active = False
-                                    if event_type in {"user.role.changed", "user.blocked", "user.deleted"}:
+                                    if event_type in {"user.role.changed", "user.blocked", "user.deleted", "user.activated"}:
                                         user.token_version += 1
                                         await RefreshSessionRepository(session).revoke_user(user.id, event_type)
                                     await set_user_security_state(
