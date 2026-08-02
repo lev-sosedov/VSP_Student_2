@@ -14,6 +14,7 @@ class RefreshSession(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    family_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     auth_user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     refresh_jti: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -23,6 +24,7 @@ class RefreshSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    replaced_by_session_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     revoke_reason: Mapped[str | None] = mapped_column(String(128))
     user_agent: Mapped[str | None] = mapped_column(String(512))
     ip_address: Mapped[str | None] = mapped_column(String(64))

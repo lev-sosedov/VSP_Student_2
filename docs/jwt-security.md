@@ -200,3 +200,18 @@ means disabling the newly attached dependency and redeploying the previous
 application image; it never requires database or volume deletion. During the
 actual algorithm cutover, rollback restores the complete previous issuer and
 verifier set together rather than enabling an open-ended dual-algorithm fallback.
+## Refresh sessions and revocation
+
+Refresh tokens are stored only as SHA-256 hashes in `refresh_sessions`. Each
+rotation revokes the old row and creates a new row in the same `family_id`.
+Reuse of any revoked token revokes the complete family and increments
+`token_version`. Login, refresh and logout-all never store JWT or token plaintext.
+
+Auth endpoints use Redis-backed multi-process limits: login/register 5 requests
+per IP and phone hash per 60 seconds; refresh 20 per IP per 60 seconds. Redis
+outage is fail-open for development availability and must be monitored in
+production. Login audit rows contain only a phone hash, outcome, reason, IP,
+user-agent and optional auth user id.
+
+Access-token revocation is not checked synchronously by every downstream
+service; the access-token lifetime is limited to 15 minutes.

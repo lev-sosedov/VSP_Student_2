@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.security.dependencies import get_current_principal
@@ -15,6 +15,7 @@ from auth_service.schemas.schemas_auth import (
 from auth_service.services.services_auth import AuthService
 from auth_service.db.db_session import get_db
 from auth_service.repositories.repository_refresh_session import RefreshSessionRepository
+from auth_service.services.rate_limit import enforce_auth_rate_limit
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -51,6 +52,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 )
 async def register(
     data: RegisterRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     service = AuthService(db)
@@ -97,8 +99,10 @@ async def register(
 )
 async def login(
     data: LoginRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
+    await enforce_auth_rate_limit(request, "login", data.phone_number)
     service = AuthService(db)
 
     try:
@@ -181,8 +185,10 @@ async def change_password(
 )
 async def refresh(
     data: RefreshRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
+    await enforce_auth_rate_limit(request, "refresh")
     service = AuthService(db)
 
     try:
@@ -220,6 +226,7 @@ async def refresh(
 async def logout(
     _principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    await enforce_auth_rate_limit(request, "register", data.phone_number)
     return {
         "message": "logout endpoint",
         "revoked": True,

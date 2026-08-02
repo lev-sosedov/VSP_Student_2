@@ -101,10 +101,11 @@ class AuthService:
         await self._store_refresh_session(pair, identity, data)
         return pair
 
-    async def _store_refresh_session(self, pair, identity, request_data=None):
+    async def _store_refresh_session(self, pair, identity, request_data=None, family_id=None):
         claims = jwt.decode(pair["refresh_token"], options={"verify_signature": False})
-        await self.sessions.create(
+        return await self.sessions.create(
             auth_user_id=identity.auth_user_id,
+            family_id=family_id,
             user_id=identity.user_id,
             refresh_jti=claims["jti"],
             refresh_token_hash=hash_refresh_token(pair["refresh_token"]),
@@ -121,7 +122,11 @@ class AuthService:
         if auth_user is None or auth_user.token_version != int(payload["token_version"]):
             raise HTTPException(status_code=401, detail="Invalid refresh token")
         session = await self.sessions.get_active(payload["jti"])
-        if session is None or session.refresh_token_hash != hash_refresh_token(data.refresh_token):
+        if session is None:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+        if session.refresh_token_hash != hash_refresh_token(data.refresh_token):
+            await self.sessions.revoke_family(session.family_id, "refresh_reuse")
+            await self.repo.increment_token_version(auth_user.id)
             raise HTTPException(status_code=401, detail="Invalid refresh token")
         try:
             identity = await self.identity_resolver.resolve(auth_user)
@@ -129,9 +134,11 @@ class AuthService:
             raise HTTPException(status_code=401, detail=exc.public_message) from exc
         if identity.user_id != int(payload["sub"]):
             raise HTTPException(status_code=401, detail="Invalid refresh token")
-        await self.sessions.revoke(session, "rotation")
+        await self.sessions.revoke(session, "rotated")
         pair = get_issuer().create_pair(identity)
-        await self._store_refresh_session(pair, identity, data)
+        new_session = await self._store_refresh_session(pair, identity, data, session.family_id)
+        session.replaced_by_session_id = new_session.id
+        await self.repo.db.commit()
         return pair
 
     async def logout_all(self, user_id: int) -> None:

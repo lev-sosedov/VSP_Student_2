@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import hashlib
+import uuid
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,7 @@ class RefreshSessionRepository:
         self.db = db
 
     async def create(self, **data) -> RefreshSession:
+        data.setdefault("family_id", uuid.uuid4().hex)
         session = RefreshSession(**data)
         self.db.add(session)
         await self.db.commit()
@@ -33,6 +35,16 @@ class RefreshSessionRepository:
         session.revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.revoke_reason = reason
         session.last_used_at = session.revoked_at
+        await self.db.commit()
+
+    async def revoke_family(self, family_id: str, reason: str) -> None:
+        await self.db.execute(update(RefreshSession).where(
+            RefreshSession.family_id == family_id,
+            RefreshSession.revoked_at.is_(None),
+        ).values(
+            revoked_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            revoke_reason=reason,
+        ))
         await self.db.commit()
 
     async def revoke_user(self, auth_user_id: int, reason: str) -> None:
