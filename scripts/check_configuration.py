@@ -68,6 +68,16 @@ def main() -> int:
             if pattern.search(text):
                 errors.append(f"{label}: {path.relative_to(ROOT)}")
 
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    protected_services = (
+        "auth-service", "user-service", "academic-service", "schedule-service",
+        "content-service", "communication-service", "notification-service", "news-service",
+    )
+    if "x-redis-environment: &redis-environment" not in compose:
+        errors.append("missing shared Redis environment anchor")
+    if compose.count("*redis-environment") < len(protected_services):
+        errors.append("not all JWT-protected services receive REDIS_URL")
+
     for file_name in files:
         path = ROOT / file_name
         if path.suffix.lower() not in {".py", ".md", ".yml", ".yaml", ".toml", ".txt"}:
