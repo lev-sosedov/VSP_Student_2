@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from datetime import datetime, timezone
+import uuid
 import jwt
 
 from auth_service.core.core_security import (
@@ -122,7 +123,9 @@ class AuthService:
         claims = jwt.decode(pair["refresh_token"], options={"verify_signature": False})
         return await self.sessions.create(
             auth_user_id=identity.auth_user_id,
-            family_id=family_id,
+            # New logins start a refresh-token family.  Passing None would
+            # bypass the repository default and violate the NOT NULL column.
+            family_id=family_id or uuid.uuid4().hex,
             user_id=identity.user_id,
             refresh_jti=claims["jti"],
             refresh_token_hash=hash_refresh_token(pair["refresh_token"]),
