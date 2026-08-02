@@ -1,0 +1,4 @@
+USER_EVENTS_EXCHANGE = "user_security_events"
+USER_EVENTS_EXCHANGE_TYPE = "fanout"
+AUTH_USER_SYNC_QUEUE = "auth_user_sync"
+USER_EVENTS_ROUTING_KEY = ""

@@ -1,9 +1,13 @@
 import asyncio
 import json
 import aio_pika
+import logging
 
 from user_service.db.db_session import AsyncSessionLocal
 from user_service.repositories.repository_outbox import OutboxRepository
+from common.messaging_contract import USER_EVENTS_EXCHANGE, USER_EVENTS_ROUTING_KEY
+
+logger = logging.getLogger(__name__)
 
 
 async def publish_outbox_forever():
@@ -11,7 +15,8 @@ async def publish_outbox_forever():
         try:
             connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
             channel = await connection.channel()
-            exchange = await channel.declare_exchange("user_events", aio_pika.ExchangeType.FANOUT, durable=True)
+            exchange = await channel.declare_exchange(USER_EVENTS_EXCHANGE, aio_pika.ExchangeType.FANOUT, durable=True)
+            logger.info("user-events outbox publisher ready exchange=%s routing_key=%r", USER_EVENTS_EXCHANGE, USER_EVENTS_ROUTING_KEY)
             async with AsyncSessionLocal() as session:
                 repo = OutboxRepository(session)
                 for event in await repo.pending():
@@ -21,7 +26,7 @@ async def publish_outbox_forever():
                         "user_id": event.user_id, "auth_id": event.auth_id,
                         **json.loads(event.payload),
                     }
-                    await exchange.publish(aio_pika.Message(body=json.dumps(body).encode()), routing_key="")
+                    await exchange.publish(aio_pika.Message(body=json.dumps(body).encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT), routing_key=USER_EVENTS_ROUTING_KEY)
                     await repo.mark_published(event.event_id)
                 await session.commit()
             await connection.close()
@@ -29,4 +34,5 @@ async def publish_outbox_forever():
         except asyncio.CancelledError:
             raise
         except Exception:
+            logger.exception("user-events outbox publisher failed; retrying")
             await asyncio.sleep(5)
