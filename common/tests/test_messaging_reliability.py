@@ -118,3 +118,56 @@ def test_readiness_uses_active_broker_probe():
     source = Path("common/src/common/readiness.py").read_text()
     assert "probe_rabbitmq" in source
     assert "asyncio.wait_for" in source
+
+
+def test_all_domain_publishers_enqueue_inside_request_transaction():
+    publishers = [
+        "services/academic_service/src/academic_service/messaging/messaging_publisher.py",
+        "services/schedule_service/src/schedule_service/messaging/messaging_event_publisher.py",
+        "services/content_service/src/content_service/messaging/messaging_event_publisher.py",
+        "services/communication_service/src/communication_service/messaging/messaging_event_publisher.py",
+        "services/news_service/src/news_service/messaging/messaging_event_publisher.py",
+    ]
+    for path in publishers:
+        source = Path(path).read_text()
+        assert "current_session.get()" in source
+        assert "EventOutbox" in source
+        assert "publish_confirmed" in source
+
+
+def test_domain_outbox_migrations_are_service_owned_and_explicit():
+    migrations = [
+        "services/academic_service/alembic/versions/20260802_01_event_outbox.py",
+        "services/schedule_service/alembic/versions/20260802_01_event_outbox.py",
+        "services/content_service/alembic/versions/20260802_01_event_outbox.py",
+        "services/communication_service/alembic/versions/20260802_02_event_outbox.py",
+        "services/news_service/alembic/versions/20260802_01_event_outbox.py",
+    ]
+    for path in migrations:
+        source = Path(path).read_text()
+        assert "op.create_table(\"event_outbox\"" in source
+        assert "op.create_index" in source
+        assert "op.drop_table(\"event_outbox\"" in source
+
+
+def test_outbox_worker_claims_rows_and_marks_only_after_confirm():
+    source = Path("common/src/common/outbox_worker.py").read_text()
+    assert "skip_locked=True" in source
+    assert "publish_confirmed" in source
+    assert source.index("publish_confirmed") < source.index("row.published_at")
+    assert "retry_count" in source and "next_attempt_at" in source
+
+
+def test_outbox_context_is_scoped_and_reset_by_session_dependency():
+    context = Path("common/src/common/outbox_context.py").read_text()
+    assert "ContextVar" in context
+    for path in [
+        "services/academic_service/src/academic_service/db/db_session.py",
+        "services/schedule_service/src/schedule_service/db/db_session.py",
+        "services/content_service/src/content_service/db/db_session.py",
+        "services/communication_service/src/communication_service/db/db_session.py",
+        "services/news_service/src/news_service/db/db_session.py",
+    ]:
+        source = Path(path).read_text()
+        assert "bind_session(session)" in source
+        assert "unbind_session(token)" in source

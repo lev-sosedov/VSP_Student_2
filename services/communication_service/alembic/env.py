@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from communication_service.db.db_base import Base
+from communication_service.models.model_event_outbox import EventOutbox  # noqa: F401
 from communication_service.models.model_processed_event import ProcessedEvent  # noqa: F401
 from communication_service.db import db_init_models  # noqa: F401
 config = context.config

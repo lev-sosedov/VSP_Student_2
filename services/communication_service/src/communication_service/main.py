@@ -38,12 +38,17 @@ from communication_service.api.api_message_attachment import (
 from communication_service.messaging.messaging_event_publisher import (
     communication_event_publisher
 )
+from communication_service.db.db_session import AsyncSessionLocal
+from communication_service.models.model_event_outbox import EventOutbox
+from communication_service.messaging.messaging_config import rabbitmq_settings
+from common.outbox_worker import OutboxWorker
 from communication_service.messaging.messaging_academic_event_consumer import (
     academic_event_consumer
 )
 
 
 API_PREFIX = "/api/v1"
+outbox_worker: OutboxWorker | None = None
 
 
 # =====================================================
@@ -78,10 +83,14 @@ async def start_rabbit_component(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global outbox_worker
     print(
         "🚀 Starting Communication Service...",
         flush=True
     )
+
+    outbox_worker = OutboxWorker(session_factory=AsyncSessionLocal, model=EventOutbox, exchange_name=rabbitmq_settings.exchange, producer="communication-service", url=rabbitmq_settings.url)
+    outbox_task = asyncio.create_task(outbox_worker.run_forever())
 
     # =========================
     # Database
@@ -156,6 +165,13 @@ async def lifespan(app: FastAPI):
     )
 
     yield
+
+    await outbox_worker.stop()
+    outbox_task.cancel()
+    try:
+        await outbox_task
+    except asyncio.CancelledError:
+        pass
 
     # =========================
     # Graceful shutdown
@@ -342,4 +358,5 @@ async def health():
 
 @app.get("/ready")
 async def ready():
-    return await database_readiness(engine, ("chats", "chat_members", "messages"), {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis"})
+    components = {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis", "outbox_worker": bool(outbox_worker and outbox_worker.started)}
+    return await database_readiness(engine, ("chats", "chat_members", "messages"), components)

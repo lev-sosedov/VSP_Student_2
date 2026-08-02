@@ -104,6 +104,25 @@ def main() -> int:
     reliability = ROOT / "common" / "src" / "common" / "messaging_reliability.py"
     if not reliability.exists():
         errors.append("missing common RabbitMQ reliability utilities")
+    for required in ("outbox_context.py", "outbox_worker.py"):
+        if not (ROOT / "common" / "src" / "common" / required).exists():
+            errors.append(f"missing common outbox utility: {required}")
+    domain_outbox = {
+        "academic_service": "20260802_01_event_outbox.py",
+        "schedule_service": "20260802_01_event_outbox.py",
+        "content_service": "20260802_01_event_outbox.py",
+        "communication_service": "20260802_02_event_outbox.py",
+        "news_service": "20260802_01_event_outbox.py",
+    }
+    for service, revision in domain_outbox.items():
+        migration = ROOT / "services" / service / "alembic" / "versions" / revision
+        model = ROOT / "services" / service / "src" / service / "models" / "model_event_outbox.py"
+        if not migration.exists() or not model.exists():
+            errors.append(f"missing transactional outbox for {service}")
+        publisher_dir = ROOT / "services" / service / "src" / service / "messaging"
+        publisher_sources = "\n".join(p.read_text(encoding="utf-8") for p in publisher_dir.glob("*publisher*.py"))
+        if "current_session.get()" not in publisher_sources or "EventOutbox" not in publisher_sources:
+            errors.append(f"domain publisher is not outbox-backed: {service}")
     for service in ("auth_service", "user_service", "academic_service", "communication_service", "notification_service"):
         main_path = ROOT / "services" / service / "src" / service / "main.py"
         if main_path.exists() and "/ready" not in main_path.read_text(encoding="utf-8"):

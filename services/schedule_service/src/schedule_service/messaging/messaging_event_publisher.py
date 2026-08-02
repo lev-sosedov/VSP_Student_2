@@ -5,8 +5,12 @@ from typing import Any
 from uuid import UUID
 
 import aio_pika
+import json
+from uuid import uuid4
 from common.messaging_contract import EventEnvelope
 from common.messaging_reliability import event_message, publish_confirmed
+from common.outbox_context import current_session
+from schedule_service.models.model_event_outbox import EventOutbox
 
 from schedule_service.messaging.messaging_config import (
     rabbitmq_settings
@@ -78,6 +82,10 @@ class ScheduleEventPublisher:
         routing_key: str,
         payload: dict[str, Any]
     ) -> None:
+        session = current_session.get()
+        if session is not None:
+            session.add(EventOutbox(event_id=str(uuid4()), event_type=routing_key, producer="schedule-service", payload=json.dumps(payload, default=str)))
+            return
         if not self.started:
             await self.start()
 

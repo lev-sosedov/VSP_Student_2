@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import os
 
 from fastapi import Depends, FastAPI
@@ -40,9 +41,14 @@ from content_service.api.api_submission_attachment import (
 from content_service.messaging.messaging_event_publisher import (
     content_event_publisher
 )
+from content_service.db.db_session import AsyncSessionLocal
+from content_service.models.model_event_outbox import EventOutbox
+from content_service.messaging.messaging_config import rabbitmq_settings
+from common.outbox_worker import OutboxWorker
 
 
 API_PREFIX = "/api/v1"
+outbox_worker: OutboxWorker | None = None
 
 
 # =====================================================
@@ -51,10 +57,14 @@ API_PREFIX = "/api/v1"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global outbox_worker
     print(
         "🚀 Starting Content Service...",
         flush=True
     )
+
+    outbox_worker = OutboxWorker(session_factory=AsyncSessionLocal, model=EventOutbox, exchange_name=rabbitmq_settings.exchange, producer="content-service", url=rabbitmq_settings.url)
+    outbox_task = asyncio.create_task(outbox_worker.run_forever())
 
     # =========================
     # Database
@@ -124,6 +134,13 @@ async def lifespan(app: FastAPI):
     )
 
     yield
+
+    await outbox_worker.stop()
+    outbox_task.cancel()
+    try:
+        await outbox_task
+    except asyncio.CancelledError:
+        pass
 
     # =========================
     # Graceful shutdown
@@ -307,4 +324,5 @@ async def health():
 
 @app.get("/ready")
 async def ready():
-    return await database_readiness(engine, ("homeworks", "lesson_contents"), {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis"})
+    components = {"rabbitmq": "probe-rabbitmq", "redis": "probe-redis", "outbox_worker": bool(outbox_worker and outbox_worker.started)}
+    return await database_readiness(engine, ("homeworks", "lesson_contents"), components)
