@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 from communication_service.db.db_session import get_session
 from communication_service.repositories.repository_chat_member import ChatMemberRepository
 from communication_service.models.model_chat import Chat
@@ -35,7 +36,7 @@ async def require_chat_member(
         try:
             response = await communication_rpc_client.call_academic(
                 method="academic.authorization.membership",
-                payload={"user_id": principal.user_id, "group_id": chat.group_id, "role": "student"},
+                payload={"user_id": principal.user_id, "group_id": chat.group_id, "role": "teacher" if principal.role is RoleType.TEACHER else "student"},
                 timeout=2.0,
             )
             if not isinstance(response, dict) or response.get("success") is not True or response.get("exists") is not True or response.get("is_active") is not True:
