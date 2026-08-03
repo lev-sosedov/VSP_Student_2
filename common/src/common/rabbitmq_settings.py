@@ -14,8 +14,11 @@ class RabbitMQSettingsMixin:
         if not host or not username or not password:
             raise ValueError("RabbitMQ connection settings are incomplete")
         port = int(getattr(self, "port", 5672))
-        virtual_host = str(getattr(self, "virtual_host", "/")).lstrip("/")
-        return f"amqp://{quote(username)}:{quote(password)}@{host}:{port}/{virtual_host}"
+        virtual_host = str(getattr(self, "virtual_host", "/")) or "/"
+        return (
+            f"amqp://{quote(username, safe='')}:{quote(password, safe='')}"
+            f"@{host}:{port}/{quote(virtual_host, safe='')}"
+        )
 
     @property
     def connection_timeout(self) -> float:
