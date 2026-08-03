@@ -288,7 +288,10 @@ Academic Service микросервиса платформы ВШП Студен
 # ROUTES
 # =====================================================
 
-app.add_middleware(JWTAuthenticationMiddleware)
+app.add_middleware(
+    JWTAuthenticationMiddleware,
+    public_paths={"/api/v1/branches"},
+)
 
 app.include_router(
     module_router,

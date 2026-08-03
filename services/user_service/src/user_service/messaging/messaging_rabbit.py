@@ -2,9 +2,10 @@ import json
 import aio_pika
 
 from user_service.schemas.schemas_events import UserCreatedEvent
+from user_service.messaging.messaging_config import rabbitmq_settings
 
 async def consume_user_events(service):
-    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
+    connection = await aio_pika.connect_robust(rabbitmq_settings.url)
     channel = await connection.channel()
     exchange = await channel.declare_exchange("user_events", aio_pika.ExchangeType.FANOUT)
     queue = await channel.declare_queue("user_created")

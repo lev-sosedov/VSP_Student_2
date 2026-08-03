@@ -168,7 +168,10 @@ Auth выполняется через auth-service.
 # API ROUTES
 # =========================
 
-app.add_middleware(JWTAuthenticationMiddleware)
+app.add_middleware(
+    JWTAuthenticationMiddleware,
+    public_paths={"/api/v1/users/public/teachers"},
+)
 
 app.include_router(
     user_router,
