@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 
 from common.identity import UnknownRoleError, UserIdentityProfile, normalize_role
+from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import (
     AsyncSessionLocal
@@ -428,6 +429,9 @@ class UserRpcServer:
             return {"success": False, "student_ids": [], "reason": "invalid_request"}
         try:
             async with AsyncSessionLocal() as session:
+                parent = await session.get(User, parent_user_id)
+                if parent is None or parent.role != RoleType.PARENT or not parent.is_active:
+                    return {"success": True, "student_ids": []}
                 rows = await session.execute(
                     select(ParentStudentLink.student_id)
                     .join(User, User.id == ParentStudentLink.student_id)

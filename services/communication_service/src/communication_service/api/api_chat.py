@@ -108,8 +108,15 @@ async def _sync_parent_private_chats(
     ):
         raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
     service = ChatService(session=session)
-    if settings.ADMIN_USER_ID > 0:
-        await service.ensure_admin_chat(student_id=parent_id, admin_id=settings.ADMIN_USER_ID)
+    admin_id = settings.ADMIN_USER_ID
+    if not isinstance(admin_id, int) or admin_id <= 0:
+        raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+    try:
+        await service.ensure_admin_chat(student_id=parent_id, admin_id=admin_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Parent chat authorization unavailable") from exc
     teacher_ids: set[int] = set()
     for raw_student_id in children_response["student_ids"]:
         if isinstance(raw_student_id, bool) or not isinstance(raw_student_id, int) or raw_student_id <= 0:

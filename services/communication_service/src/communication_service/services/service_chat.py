@@ -68,29 +68,36 @@ class ChatService:
         if existing:
             primary = existing[0]
             if primary.participant_one_id is None or primary.participant_two_id is None:
-                primary.participant_one_id = first
-                primary.participant_two_id = second
-                await self.session.flush()
+                try:
+                    async with self.session.begin_nested():
+                        primary.participant_one_id = first
+                        primary.participant_two_id = second
+                        await self.session.flush()
+                except IntegrityError:
+                    existing = await self.chat_repository.get_private_chats_between(first, second)
+                    if existing:
+                        return existing[0]
+                    raise
             return primary
         await external_validation_service.get_available_user(first)
         await external_validation_service.get_available_user(second)
         try:
-            chat = await self.chat_repository.create({
-                "chat_type": ChatType.PRIVATE,
-                "title": title,
-                "created_by": created_by,
-                "participant_one_id": first,
-                "participant_two_id": second,
-            })
-            await self.member_repository.create_owner(chat_id=chat.id, user_id=created_by)
-            other = second if created_by == first else first
-            await self.member_repository.create(
-                chat_id=chat.id, user_id=other,
-                member_role=ChatMemberRole.MEMBER, added_by=created_by,
-            )
+            async with self.session.begin_nested():
+                chat = await self.chat_repository.create({
+                    "chat_type": ChatType.PRIVATE,
+                    "title": title,
+                    "created_by": created_by,
+                    "participant_one_id": first,
+                    "participant_two_id": second,
+                })
+                await self.member_repository.create_owner(chat_id=chat.id, user_id=created_by)
+                other = second if created_by == first else first
+                await self.member_repository.create(
+                    chat_id=chat.id, user_id=other,
+                    member_role=ChatMemberRole.MEMBER, added_by=created_by,
+                )
             return chat
         except IntegrityError:
-            await self.session.rollback()
             existing = await self.chat_repository.get_private_chats_between(first, second)
             if existing:
                 return existing[0]
@@ -354,6 +361,10 @@ class ChatService:
                 "Студент и администратор не могут совпадать"
             )
 
+        configured_admin = await external_validation_service.get_available_user(user_id=admin_id)
+        if str(configured_admin.get("role", "")).lower() != "admin":
+            raise ValueError("configured administrator is not an active admin")
+
         # Одновременная загрузка страницы и событие RabbitMQ
         # не должны создавать два одинаковых админ-чата.
         advisory_lock_key = (
@@ -398,10 +409,6 @@ class ChatService:
             user_id=student_id
         )
 
-        await external_validation_service.get_available_user(
-            user_id=admin_id
-        )
-
         chat_data = ChatCreate(
             chat_type=ChatType.PRIVATE,
             title="Администрация",
@@ -413,34 +420,29 @@ class ChatService:
         )
 
         try:
-            chat = await self.chat_repository.create(
-                chat_data={
-                    **chat_data.model_dump(),
-                    "participant_one_id": min(student_id, admin_id),
-                    "participant_two_id": max(student_id, admin_id),
-                }
-            )
+            async with self.session.begin_nested():
+                chat = await self.chat_repository.create(
+                    chat_data={
+                        **chat_data.model_dump(),
+                        "participant_one_id": min(student_id, admin_id),
+                        "participant_two_id": max(student_id, admin_id),
+                    }
+                )
+                await self.member_repository.create_owner(chat_id=chat.id, user_id=admin_id)
+                await self.member_repository.create(
+                    chat_id=chat.id,
+                    user_id=student_id,
+                    member_role=ChatMemberRole.MEMBER,
+                    added_by=admin_id,
+                )
             await self.session.flush()
         except IntegrityError:
-            await self.session.rollback()
             existing_chats = await self.chat_repository.get_private_chats_between(
                 first_user_id=student_id, second_user_id=admin_id
             )
             if not existing_chats:
                 raise
             return existing_chats[0]
-
-        await self.member_repository.create_owner(
-            chat_id=chat.id,
-            user_id=admin_id
-        )
-
-        await self.member_repository.create(
-            chat_id=chat.id,
-            user_id=student_id,
-            member_role=ChatMemberRole.MEMBER,
-            added_by=admin_id
-        )
 
         await self.message_repository.create(
             message_data={
