@@ -61,7 +61,7 @@ async def test_parent_sync_malformed_rpc_fails_without_creating_chats(monkeypatc
     with pytest.raises(HTTPException) as error:
         await api_chat._sync_parent_private_chats(5, object())
     assert error.value.status_code == 503
-    assert _FakeService.instances[-1].calls == []
+    assert _FakeService.instances == []
 
 
 @pytest.mark.asyncio
