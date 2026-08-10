@@ -33,12 +33,14 @@ from communication_service.websocket.websocket_manager import (
     websocket_manager
 )
 from communication_service.api.dependencies import require_chat_member
+from common.security.dependencies import get_current_principal
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 
 router = APIRouter(
     prefix="/message-reads",
-    tags=["Message reads"],
-    dependencies=[Depends(require_chat_member)]
+    tags=["Message reads"]
 )
 
 
@@ -55,6 +57,7 @@ router = APIRouter(
 async def mark_message_as_read_endpoint(
     message_id: int,
     read_data: MessageReadCreate,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     message = await session.get(
@@ -111,6 +114,7 @@ async def mark_message_as_read_endpoint(
 async def mark_chat_as_read_endpoint(
     chat_id: int,
     read_data: ChatReadAllRequest,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = MessageReadService(
@@ -164,6 +168,7 @@ async def mark_chat_as_read_endpoint(
 async def get_chat_unread_count_endpoint(
     chat_id: int,
     user_id: int,
+    _member: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session)
 ):
     service = MessageReadService(
@@ -202,8 +207,11 @@ async def get_chat_unread_count_endpoint(
 )
 async def get_user_unread_count_endpoint(
     user_id: int,
+    principal: CurrentPrincipal = Depends(get_current_principal),
     session: AsyncSession = Depends(get_session)
 ):
+    if principal.role is not RoleType.ADMIN and user_id != principal.user_id:
+        raise HTTPException(status_code=403, detail="Cannot query another user's unread count")
     service = MessageReadService(
         session=session
     )

@@ -49,6 +49,53 @@ class ChatService:
             session=session
         )
 
+    async def ensure_private_chat(
+        self,
+        first_user_id: int,
+        second_user_id: int,
+        created_by: int,
+        title: str = "\u041b\u0438\u0447\u043d\u043e\u0435 \u043e\u0431\u0449\u0435\u043d\u0438\u0435",
+    ) -> Chat:
+        """Idempotent canonical private chat creation for trusted server flows."""
+        if first_user_id <= 0 or second_user_id <= 0 or first_user_id == second_user_id:
+            raise ValueError("private chat requires two distinct users")
+        first, second = sorted((first_user_id, second_user_id))
+        await self.session.execute(
+            text("SELECT pg_advisory_xact_lock(:lock_key)"),
+            {"lock_key": (first << 32) + second},
+        )
+        existing = await self.chat_repository.get_private_chats_between(first, second)
+        if existing:
+            primary = existing[0]
+            if primary.participant_one_id is None or primary.participant_two_id is None:
+                primary.participant_one_id = first
+                primary.participant_two_id = second
+                await self.session.flush()
+            return primary
+        await external_validation_service.get_available_user(first)
+        await external_validation_service.get_available_user(second)
+        try:
+            chat = await self.chat_repository.create({
+                "chat_type": ChatType.PRIVATE,
+                "title": title,
+                "created_by": created_by,
+                "participant_one_id": first,
+                "participant_two_id": second,
+            })
+            await self.member_repository.create_owner(chat_id=chat.id, user_id=created_by)
+            other = second if created_by == first else first
+            await self.member_repository.create(
+                chat_id=chat.id, user_id=other,
+                member_role=ChatMemberRole.MEMBER, added_by=created_by,
+            )
+            return chat
+        except IntegrityError:
+            await self.session.rollback()
+            existing = await self.chat_repository.get_private_chats_between(first, second)
+            if existing:
+                return existing[0]
+            raise
+
     # =================================================
     # Получить чат
     # =================================================

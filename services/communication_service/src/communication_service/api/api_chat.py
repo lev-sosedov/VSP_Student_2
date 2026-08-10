@@ -92,6 +92,57 @@ async def create_chat_endpoint(
 # Получить список чатов
 # =====================================================
 
+async def _sync_parent_private_chats(
+    parent_id: int,
+    session: AsyncSession,
+) -> None:
+    """Materialize only server-authorized parent/admin and parent/teacher chats."""
+    children_response = await communication_rpc_client.call_user(
+        method="parent.authorization.students",
+        payload={"parent_user_id": parent_id},
+    )
+    if (
+        not isinstance(children_response, dict)
+        or children_response.get("success") is not True
+        or not isinstance(children_response.get("student_ids"), list)
+    ):
+        raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+    service = ChatService(session=session)
+    if settings.ADMIN_USER_ID > 0:
+        await service.ensure_admin_chat(student_id=parent_id, admin_id=settings.ADMIN_USER_ID)
+    teacher_ids: set[int] = set()
+    for raw_student_id in children_response["student_ids"]:
+        if isinstance(raw_student_id, bool) or not isinstance(raw_student_id, int) or raw_student_id <= 0:
+            raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+        groups_response = await communication_rpc_client.call_academic(
+            method="academic.authorization.user_groups",
+            payload={"user_id": raw_student_id},
+        )
+        group_ids = groups_response.get("group_ids") if isinstance(groups_response, dict) and groups_response.get("success") is True else None
+        if not isinstance(group_ids, list):
+            raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+        for raw_group_id in group_ids:
+            if isinstance(raw_group_id, bool) or not isinstance(raw_group_id, int) or raw_group_id <= 0:
+                raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+            members_response = await communication_rpc_client.call_academic(
+                method="group_members.get_by_group",
+                payload={"group_id": raw_group_id, "role": "teacher"},
+            )
+            members = members_response.get("members") if isinstance(members_response, dict) and members_response.get("success") is True else None
+            if not isinstance(members, list):
+                raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+            for member in members:
+                teacher_id = member.get("user_id") if isinstance(member, dict) else None
+                if isinstance(teacher_id, int) and teacher_id > 0:
+                    teacher_ids.add(teacher_id)
+    for teacher_id in sorted(teacher_ids):
+        await service.ensure_private_chat(
+            first_user_id=parent_id,
+            second_user_id=teacher_id,
+            created_by=parent_id,
+            title="\u041e\u0431\u0449\u0435\u043d\u0438\u0435 \u0441 \u043f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u0435\u043c",
+        )
+
 @router.get(
     "",
     response_model=ChatListResponse,
@@ -142,6 +193,8 @@ async def get_chats_endpoint(
 ):
     if user_id is not None and user_id != principal.user_id and principal.role is not RoleType.ADMIN:
         raise HTTPException(status_code=403, detail="Cannot query another user's chats")
+    if principal.role is RoleType.PARENT:
+        await _sync_parent_private_chats(principal.user_id, session)
     effective_user_id = user_id if principal.role is RoleType.ADMIN and user_id is not None else principal.user_id
     chat_service = ChatService(
         session=session
