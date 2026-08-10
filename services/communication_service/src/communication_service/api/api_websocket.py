@@ -84,10 +84,17 @@ async def validate_websocket_access(
 async def chat_websocket_endpoint(
     websocket: WebSocket,
     chat_id: int,
-    user_id: int
+    user_id: int | None = None
 ):
     authorization = websocket.headers.get("authorization")
     token = websocket.query_params.get("token")
+    requested_subprotocols = websocket.scope.get("subprotocols", [])
+    selected_subprotocol = None
+    for protocol in requested_subprotocols:
+        if protocol.startswith("vshp.jwt."):
+            token = protocol.removeprefix("vshp.jwt.")
+            selected_subprotocol = "vshp.jwt"
+            break
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
     if not token:
@@ -98,9 +105,10 @@ async def chat_websocket_endpoint(
     except AuthenticationError:
         await websocket.close(code=4401, reason="Invalid authentication token")
         return
-    if principal.user_id != user_id:
+    if user_id is not None and principal.user_id != user_id:
         await websocket.close(code=4403, reason="User identity mismatch")
         return
+    user_id = principal.user_id
 
     has_access, error_message = (
         await validate_websocket_access(
@@ -120,7 +128,8 @@ async def chat_websocket_endpoint(
     await websocket_manager.connect(
         chat_id=chat_id,
         user_id=user_id,
-        websocket=websocket
+        websocket=websocket,
+        subprotocol=selected_subprotocol,
     )
 
     await websocket_manager.broadcast_to_chat(

@@ -34,9 +34,10 @@ class WebSocketManager:
         self,
         chat_id: int,
         user_id: int,
-        websocket: WebSocket
+        websocket: WebSocket,
+        subprotocol: str | None = None,
     ) -> None:
-        await websocket.accept()
+        await websocket.accept(subprotocol=subprotocol)
 
         async with self._lock:
             self.active_connections[
