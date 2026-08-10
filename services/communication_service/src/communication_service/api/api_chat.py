@@ -92,6 +92,75 @@ async def create_chat_endpoint(
 # Получить список чатов
 # =====================================================
 
+async def _sync_parent_private_chats(
+    parent_id: int,
+    session: AsyncSession,
+) -> None:
+    """Materialize only server-authorized parent/admin and parent/teacher chats."""
+    admin_id = settings.ADMIN_USER_ID
+    if not isinstance(admin_id, int) or admin_id <= 0:
+        raise HTTPException(status_code=503, detail="Parent chat authorization unavailable")
+
+    try:
+        children_response = await communication_rpc_client.call_user(
+            method="parent.authorization.students",
+            payload={"parent_user_id": parent_id},
+        )
+        if (
+            not isinstance(children_response, dict)
+            or children_response.get("success") is not True
+            or not isinstance(children_response.get("student_ids"), list)
+        ):
+            raise ValueError("malformed parent authorization response")
+
+        teacher_ids: set[int] = set()
+        for raw_student_id in children_response["student_ids"]:
+            if isinstance(raw_student_id, bool) or not isinstance(raw_student_id, int) or raw_student_id <= 0:
+                raise ValueError("malformed student authorization response")
+            groups_response = await communication_rpc_client.call_academic(
+                method="academic.authorization.user_groups",
+                payload={"user_id": raw_student_id},
+            )
+            group_ids = (
+                groups_response.get("group_ids")
+                if isinstance(groups_response, dict) and groups_response.get("success") is True
+                else None
+            )
+            if not isinstance(group_ids, list):
+                raise ValueError("malformed group authorization response")
+            for raw_group_id in group_ids:
+                if isinstance(raw_group_id, bool) or not isinstance(raw_group_id, int) or raw_group_id <= 0:
+                    raise ValueError("malformed group authorization response")
+                members_response = await communication_rpc_client.call_academic(
+                    method="group_members.get_by_group",
+                    payload={"group_id": raw_group_id, "role": "teacher"},
+                )
+                members = (
+                    members_response.get("members")
+                    if isinstance(members_response, dict) and members_response.get("success") is True
+                    else None
+                )
+                if not isinstance(members, list):
+                    raise ValueError("malformed teacher authorization response")
+                for member in members:
+                    teacher_id = member.get("user_id") if isinstance(member, dict) else None
+                    if isinstance(teacher_id, int) and not isinstance(teacher_id, bool) and teacher_id > 0:
+                        teacher_ids.add(teacher_id)
+
+        service = ChatService(session=session)
+        await service.ensure_admin_chat(student_id=parent_id, admin_id=admin_id)
+        for teacher_id in sorted(teacher_ids):
+            await service.ensure_private_chat(
+                first_user_id=parent_id,
+                second_user_id=teacher_id,
+                created_by=parent_id,
+                title="??????? ? ??????????????",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Parent chat authorization unavailable") from exc
+
 @router.get(
     "",
     response_model=ChatListResponse,
@@ -142,6 +211,8 @@ async def get_chats_endpoint(
 ):
     if user_id is not None and user_id != principal.user_id and principal.role is not RoleType.ADMIN:
         raise HTTPException(status_code=403, detail="Cannot query another user's chats")
+    if principal.role is RoleType.PARENT:
+        await _sync_parent_private_chats(principal.user_id, session)
     effective_user_id = user_id if principal.role is RoleType.ADMIN and user_id is not None else principal.user_id
     chat_service = ChatService(
         session=session

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 
 from common.identity import UnknownRoleError, UserIdentityProfile, normalize_role
+from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import (
     AsyncSessionLocal
@@ -131,6 +132,9 @@ class UserRpcServer:
 
                 elif method == "parent.authorization.has_student":
                     response = await self.parent_has_student(payload)
+
+                elif method == "parent.authorization.students":
+                    response = await self.parent_students(payload)
 
                 elif method == "identity.resolve_by_auth_id":
                     response = await self.resolve_identity_by_auth_id(
@@ -411,6 +415,37 @@ class UserRpcServer:
         if row is None:
             response["reason"] = "parent_student_link_not_found"
         return response
+
+    async def parent_students(self, payload: dict) -> dict:
+        """Return active child ids only; no profile data crosses the RPC boundary."""
+        raw_parent_user_id = payload.get("parent_user_id")
+        if isinstance(raw_parent_user_id, bool):
+            return {"success": False, "student_ids": [], "reason": "invalid_request"}
+        try:
+            parent_user_id = int(raw_parent_user_id)
+        except (TypeError, ValueError):
+            return {"success": False, "student_ids": [], "reason": "invalid_request"}
+        if parent_user_id <= 0:
+            return {"success": False, "student_ids": [], "reason": "invalid_request"}
+        try:
+            async with AsyncSessionLocal() as session:
+                parent = await session.get(User, parent_user_id)
+                if parent is None or parent.role != RoleType.PARENT or not parent.is_active:
+                    return {"success": True, "student_ids": []}
+                rows = await session.execute(
+                    select(ParentStudentLink.student_id)
+                    .join(User, User.id == ParentStudentLink.student_id)
+                    .where(
+                        ParentStudentLink.parent_id == parent_user_id,
+                        ParentStudentLink.is_active.is_(True),
+                        User.is_active.is_(True),
+                    )
+                    .order_by(ParentStudentLink.student_id)
+                )
+                student_ids = [int(student_id) for student_id in rows.scalars().all()]
+        except Exception:
+            return {"success": False, "student_ids": [], "reason": "authorization_unavailable"}
+        return {"success": True, "student_ids": student_ids}
 
     # =================================================
     # SERIALIZE USER

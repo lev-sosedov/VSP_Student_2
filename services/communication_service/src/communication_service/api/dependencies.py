@@ -7,6 +7,7 @@ from common.utils.enum_role import RoleType
 from communication_service.db.db_session import get_session
 from communication_service.repositories.repository_chat_member import ChatMemberRepository
 from communication_service.models.model_chat import Chat
+from communication_service.models.model_message import Message
 from communication_service.messaging.messaging_rpc_client import communication_rpc_client
 
 
@@ -16,6 +17,12 @@ async def require_chat_member(
     session: AsyncSession = Depends(get_session),
 ) -> CurrentPrincipal:
     raw_chat_id = request.path_params.get("chat_id") or request.query_params.get("chat_id")
+    if raw_chat_id is None and request.path_params.get("message_id") is not None:
+        try:
+            message = await session.get(Message, int(request.path_params["message_id"]))
+            raw_chat_id = message.chat_id if message is not None else None
+        except (TypeError, ValueError):
+            raw_chat_id = None
     if raw_chat_id is None and request.method in {"POST", "PATCH", "DELETE"}:
         try:
             body = await request.json()
