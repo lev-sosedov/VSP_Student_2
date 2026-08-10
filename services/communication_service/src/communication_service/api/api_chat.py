@@ -23,7 +23,9 @@ from communication_service.schemas.schemas_chat import (
     ChatListItemResponse,
     ChatListResponse,
     ChatResponse,
-    ChatUpdate
+    ChatUpdate,
+    ChatParticipantListResponse,
+    ChatParticipantResponse,
 )
 from communication_service.core.core_config import settings
 from communication_service.services.service_chat import (
@@ -359,6 +361,60 @@ async def ensure_student_admin_chat_endpoint(
 # =====================================================
 # Получить чат по ID
 # =====================================================
+
+@router.get(
+    "/{chat_id}/participants",
+    response_model=ChatParticipantListResponse,
+    summary="Scoped chat participant profiles",
+)
+async def get_chat_participants_endpoint(
+    chat_id: int,
+    _principal: CurrentPrincipal = Depends(require_chat_member),
+    session: AsyncSession = Depends(get_session),
+):
+    from communication_service.repositories.repository_chat_member import ChatMemberRepository
+
+    members = await ChatMemberRepository(session=session).get_list(
+        chat_id=chat_id, is_active=True, skip=0, limit=500
+    )
+    user_ids = [member.user_id for member in members[0]]
+    if not user_ids:
+        return ChatParticipantListResponse(items=[])
+    response = await communication_rpc_client.call_user(
+        method="users.get_by_ids", payload={"user_ids": user_ids}
+    )
+    if (
+        not isinstance(response, dict)
+        or response.get("success") is not True
+        or not isinstance(response.get("users"), list)
+    ):
+        raise HTTPException(status_code=503, detail="Chat participant profiles unavailable")
+    profiles = {
+        profile.get("id"): profile
+        for profile in response["users"]
+        if isinstance(profile, dict) and isinstance(profile.get("id"), int)
+    }
+    items: list[ChatParticipantResponse] = []
+    for user_id in user_ids:
+        profile = profiles.get(user_id)
+        if profile is None or not isinstance(profile.get("role"), str):
+            continue
+        role = profile["role"].lower()
+        name = " ".join(
+            str(value).strip()
+            for value in (
+                profile.get("first_name") if role == "student" else profile.get("user_name"),
+                profile.get("user_name") if role == "student" else profile.get("last_name"),
+            )
+            if value and str(value).strip()
+        ) or ("?????????????" if role == "teacher" else "????????????")
+        items.append(ChatParticipantResponse(
+            user_id=user_id, role=role, display_name=name,
+            avatar_url=profile.get("avatar_url"),
+            is_active=profile.get("is_active") is True,
+        ))
+    return ChatParticipantListResponse(items=items)
+
 
 @router.get(
     "/{chat_id}",

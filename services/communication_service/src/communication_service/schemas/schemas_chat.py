@@ -253,3 +253,15 @@ class ChatDetailResponse(ChatResponse):
 class ChatListResponse(BaseModel):
     total: int
     items: list[ChatListItemResponse]
+
+
+class ChatParticipantResponse(BaseModel):
+    user_id: int
+    role: str
+    display_name: str
+    avatar_url: str | None = None
+    is_active: bool
+
+
+class ChatParticipantListResponse(BaseModel):
+    items: list[ChatParticipantResponse]

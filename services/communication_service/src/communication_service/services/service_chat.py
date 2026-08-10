@@ -78,6 +78,16 @@ class ChatService:
                     if existing:
                         return existing[0]
                     raise
+            if title == "??????? ? ??????????????" and (
+                not primary.title
+                or primary.title in {
+                    "??????? ? ??????????????",
+                    "???????????? ?" + str(second),
+                    "????????????? ?" + str(second),
+                }
+            ):
+                primary.title = title
+                await self.session.flush()
             return primary
         await external_validation_service.get_available_user(first)
         await external_validation_service.get_available_user(second)

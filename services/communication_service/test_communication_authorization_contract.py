@@ -40,3 +40,20 @@ def test_private_chat_cannot_gain_third_member():
     source = Path("services/communication_service/src/communication_service/services/service_chat.py").read_text(encoding="utf-8")
     assert "ChatType.PRIVATE" in source
     assert "third" in source.lower() or "private" in source.lower()
+
+
+def test_websocket_accepts_access_token_via_subprotocol_without_query_token():
+    source = Path("services/communication_service/src/communication_service/api/api_websocket.py").read_text(encoding="utf-8")
+    manager = Path("services/communication_service/src/communication_service/websocket/websocket_manager.py").read_text(encoding="utf-8")
+    assert "vshp.jwt." in source
+    assert "query_params.get(\"token\")" in source
+    assert "subprotocol=selected_subprotocol" in source
+    assert "code=4401" in source and "code=4403" in source
+    assert "await websocket.accept(subprotocol=subprotocol)" in manager
+
+
+def test_scoped_chat_participant_profiles_require_chat_membership():
+    source = Path("services/communication_service/src/communication_service/api/api_chat.py").read_text(encoding="utf-8")
+    assert "/{chat_id}/participants" in source
+    assert "users.get_by_ids" in source
+    assert "Depends(require_chat_member)" in source
