@@ -90,6 +90,12 @@ class GroupMemberService:
 
     # получить активных студентов группы
     # вместе с профилями из User Service
+    async def get_active_student_groups(self, student_user_id: int):
+        return await self.repo.get_active_student_memberships(student_user_id)
+    async def get_parent_student_groups(self, parent_user_id: int, student_user_id: int):
+        if not await self.user_client.has_parent_student_link(parent_user_id, student_user_id):
+            raise PermissionError("Parent is not linked to student")
+        return await self.repo.get_active_student_memberships(student_user_id)
     async def get_group_students(self, group_id: int):
         group = await self.group_repo.get_by_id(group_id)
 

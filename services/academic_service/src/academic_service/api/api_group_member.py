@@ -595,6 +595,30 @@ async def count_teachers(
 # =========================
 # Получить группы пользователя
 # =========================
+
+@router.get(
+    "/parent/children/{student_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=list[GroupMemberResponse],
+    summary="Active memberships for a linked child",
+)
+async def get_parent_child_groups(
+        student_id: int,
+        service: GroupMemberService = Depends(get_group_member_service),
+        principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if student_id <= 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if principal.role is RoleType.ADMIN:
+        return await service.get_active_student_groups(student_id)
+    if principal.role is not RoleType.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    try:
+        return await service.get_parent_student_groups(principal.user_id, student_id)
+    except PermissionError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden") from error
+    except Exception as error:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authorization unavailable") from error
 @router.get(
     "/user/{user_id}",
     status_code=status.HTTP_200_OK,

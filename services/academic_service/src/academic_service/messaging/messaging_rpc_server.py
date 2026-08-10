@@ -4,6 +4,7 @@ import aio_pika
 from sqlalchemy import select
 
 from academic_service.db.db_session import AsyncSessionLocal
+from academic_service.messaging.messaging_rpc_client import rabbit_rpc_client
 from academic_service.messaging.messaging_config import (
     rabbitmq_settings
 )
@@ -89,6 +90,9 @@ class AcademicRpcServer:
                     response = await self.get_group_members(
                         payload
                     )
+
+                elif method == "parent.authorization.has_student_group":
+                    response = await self.authorization_parent_student_group(payload)
 
                 elif method == "academic.authorization.membership":
                     response = await self.authorization_membership(payload)
@@ -373,6 +377,68 @@ class AcademicRpcServer:
                 ]
             }
 
+    async def authorization_parent_student_group(self, payload: dict) -> dict:
+        """Authorize a parent only for an active student's active group membership."""
+        try:
+            raw_parent = payload["parent_user_id"]
+            raw_student = payload["student_user_id"]
+            raw_group = payload["group_id"]
+            if any(isinstance(value, bool) for value in (raw_parent, raw_student, raw_group)):
+                raise ValueError("boolean identifier")
+            parent_user_id = int(raw_parent)
+            student_user_id = int(raw_student)
+            group_id = int(raw_group)
+        except (KeyError, TypeError, ValueError):
+            return {"success": False, "authorized": False, "reason": "invalid_request"}
+        if min(parent_user_id, student_user_id, group_id) <= 0:
+            return {"success": False, "authorized": False, "reason": "invalid_request"}
+
+        try:
+            user_response = await rabbit_rpc_client.call(
+                method="parent.authorization.has_student",
+                payload={
+                    "parent_user_id": parent_user_id,
+                    "student_user_id": student_user_id,
+                },
+                timeout=5.0,
+            )
+        except Exception:
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        if not isinstance(user_response, dict):
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        if not isinstance(user_response.get("success"), bool) or not isinstance(user_response.get("authorized"), bool):
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        reason = user_response.get("reason")
+        if reason is not None and not isinstance(reason, str):
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        if user_response["success"] is not True:
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        if user_response["authorized"] is not True:
+            return {"success": True, "authorized": False, "reason": reason or "parent_student_link_not_found"}
+        if user_response.get("parent_user_id") != parent_user_id or user_response.get("student_user_id") != student_user_id:
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+
+        try:
+            async with AsyncSessionLocal() as session:
+                query = select(GroupMember).join(Group, Group.id == GroupMember.group_id).where(
+                    GroupMember.user_id == student_user_id,
+                    GroupMember.group_id == group_id,
+                    GroupMember.role == "student",
+                    GroupMember.is_active.is_(True),
+                    Group.is_active.is_(True),
+                )
+                membership = (await session.execute(query)).scalar_one_or_none()
+        except Exception:
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        if membership is None:
+            return {"success": True, "authorized": False, "reason": "student_group_membership_not_found"}
+        return {
+            "success": True,
+            "authorized": True,
+            "parent_user_id": parent_user_id,
+            "student_user_id": student_user_id,
+            "group_id": group_id,
+        }
     async def authorization_membership(self, payload: dict) -> dict:
         try:
             user_id, group_id = int(payload["user_id"]), int(payload["group_id"])
