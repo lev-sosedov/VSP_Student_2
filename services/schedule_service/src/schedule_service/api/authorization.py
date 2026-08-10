@@ -1,13 +1,13 @@
 from fastapi import Depends, HTTPException, Request, status
 
 from common.security.dependencies import get_current_principal
+from common.parent_authorization import ParentAuthorizationClient, ParentStudentGroupAuthorizationClient
 from common.security.principal import CurrentPrincipal
 from common.utils.enum_role import RoleType
 from schedule_service.messaging.messaging_rpc_client import rabbit_rpc_client
 from schedule_service.db.db_session import get_session
 from schedule_service.models.model_lesson_schedule import LessonSchedule
 from schedule_service.models.model_attendance import Attendance
-from sqlalchemy import select
 
 
 async def _membership(principal: CurrentPrincipal, group_id: int, role: str) -> CurrentPrincipal:
@@ -110,3 +110,39 @@ async def require_attendance_teacher_or_admin(request: Request, principal: Curre
     if lesson is None:
         raise HTTPException(status_code=404, detail="Lesson not found")
     return await _membership(principal, lesson.group_id, "teacher")
+
+async def require_parent_student(principal: CurrentPrincipal, student_id: int) -> CurrentPrincipal:
+    if principal.role is RoleType.ADMIN:
+        return principal
+    if principal.role is not RoleType.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    response = await ParentAuthorizationClient(rabbit_rpc_client.call_user).check(
+        principal.user_id,
+        student_id,
+    )
+    if response is None or response.get("success") is not True:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authorization unavailable")
+    if response.get("authorized") is not True:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    return principal
+
+
+async def require_parent_student_group(
+    principal: CurrentPrincipal,
+    student_id: int,
+    group_id: int,
+) -> CurrentPrincipal:
+    if principal.role is RoleType.ADMIN:
+        return principal
+    if principal.role is not RoleType.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    response = await ParentStudentGroupAuthorizationClient(rabbit_rpc_client.call_academic).check(
+        principal.user_id,
+        student_id,
+        group_id,
+    )
+    if response is None or response.get("success") is not True:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Authorization unavailable")
+    if response.get("authorized") is not True:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    return principal
