@@ -147,9 +147,49 @@ async def _sync_parent_private_chats(
                     if isinstance(teacher_id, int) and not isinstance(teacher_id, bool) and teacher_id > 0:
                         teacher_ids.add(teacher_id)
 
+        # Validate every candidate before any Communication DB write. A missing,
+        # inactive or non-teacher candidate is stale Academic data and is skipped;
+        # malformed/technical User RPC responses fail closed.
+        valid_teacher_ids: set[int] = set()
+        for teacher_id in sorted(teacher_ids):
+            user_response = await communication_rpc_client.call_user(
+                method="user.get_by_id",
+                payload={"user_id": teacher_id},
+            )
+            if not isinstance(user_response, dict) or user_response.get("success") is not True:
+                raise ValueError("User authorization RPC unavailable")
+            user = user_response.get("user")
+            if user is None:
+                continue
+            if (
+                not isinstance(user, dict)
+                or user.get("id") != teacher_id
+                or not isinstance(user.get("is_active"), bool)
+                or not isinstance(user.get("role"), str)
+            ):
+                raise ValueError("malformed User authorization response")
+            if user["is_active"] and user["role"].lower() == "teacher":
+                valid_teacher_ids.add(teacher_id)
+
+        admin_response = await communication_rpc_client.call_user(
+            method="user.get_by_id",
+            payload={"user_id": admin_id},
+        )
+        if not isinstance(admin_response, dict) or admin_response.get("success") is not True:
+            raise ValueError("administrator authorization RPC unavailable")
+        admin_user = admin_response.get("user")
+        if (
+            not isinstance(admin_user, dict)
+            or admin_user.get("id") != admin_id
+            or admin_user.get("is_active") is not True
+            or not isinstance(admin_user.get("role"), str)
+            or admin_user["role"].lower() != "admin"
+        ):
+            raise ValueError("configured administrator is not an active admin")
+
         service = ChatService(session=session)
         await service.ensure_admin_chat(student_id=parent_id, admin_id=admin_id)
-        for teacher_id in sorted(teacher_ids):
+        for teacher_id in sorted(valid_teacher_ids):
             await service.ensure_private_chat(
                 first_user_id=parent_id,
                 second_user_id=teacher_id,
