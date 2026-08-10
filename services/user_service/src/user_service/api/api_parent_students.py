@@ -6,6 +6,10 @@ from fastapi import (
     status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.dependencies import get_current_principal
+from common.security.permissions import require_admin
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import get_db
 from user_service.schemas.schemas_parent_student import (
@@ -66,6 +70,7 @@ def create_http_exception(
 async def create_parent_student_link(
     data: ParentStudentLinkCreate,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -89,11 +94,18 @@ async def create_parent_student_link(
 async def get_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     service = ParentStudentService(db)
 
     try:
-        return await service.get_link(link_id)
+        link = await service.get_link(link_id)
+        if principal.role is not RoleType.ADMIN and principal.user_id not in {
+            link.parent_id,
+            link.student_id,
+        }:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return link
 
     except ValueError as error:
         raise create_http_exception(error)
@@ -116,7 +128,12 @@ async def get_parent_children(
         ),
     ),
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role is not RoleType.ADMIN and (
+        principal.role is not RoleType.PARENT or parent_id != principal.user_id
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     service = ParentStudentService(db)
 
     try:
@@ -146,10 +163,17 @@ async def get_student_parents(
         ),
     ),
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     service = ParentStudentService(db)
 
     try:
+        if principal.role is not RoleType.ADMIN and principal.user_id != student_id:
+            if principal.role is not RoleType.PARENT:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+            links = await service.get_student_parents(student_id=student_id, active_only=True)
+            if not any(link.parent_id == principal.user_id for link in links):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
         return await service.get_student_parents(
             student_id=student_id,
             active_only=active_only,
@@ -169,6 +193,7 @@ async def update_parent_student_link(
     link_id: int,
     data: ParentStudentLinkUpdate,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -191,6 +216,7 @@ async def update_parent_student_link(
 async def activate_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -212,6 +238,7 @@ async def activate_parent_student_link(
 async def deactivate_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
