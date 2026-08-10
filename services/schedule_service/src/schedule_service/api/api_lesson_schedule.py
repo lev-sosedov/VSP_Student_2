@@ -333,7 +333,7 @@ async def get_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -418,7 +418,7 @@ async def get_group_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -468,7 +468,7 @@ async def get_teacher_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -604,7 +604,7 @@ async def update_lesson_endpoint(
 
     if new_end_time <= new_start_time:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Время окончания должно быть позже "
                 "времени начала"
