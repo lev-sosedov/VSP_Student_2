@@ -78,6 +78,21 @@ class GroupMemberService:
 
         return await self.repo.get_teachers(group_id)
 
+    async def get_teacher(self, group_id: int):
+        teachers = await self.get_teachers(group_id)
+        # Membership order is deterministic, but User Service is authoritative:
+        # stale, inactive and mis-role-linked memberships are skipped.
+        for membership in teachers:
+            try:
+                user = await self.user_client.get_user_by_id(membership.user_id)
+            except Exception as error:
+                raise RuntimeError("Teacher authorization unavailable") from error
+            if user is None:
+                continue
+            if user.get("is_active") is True and user.get("role", "").lower() == "teacher":
+                return membership
+        return None
+
     # список участников группы
     async def get_group_members(self, group_id: int):
 

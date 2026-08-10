@@ -9,11 +9,19 @@ class UserRpcClient:
 
     async def get_user_by_id(self, user_id: int) -> dict | None:
         response = await self.rpc_client.call(method="user.get_by_id", payload={"user_id": user_id})
-
-        if not response.get("success"):
-            raise ValueError(response.get("error", "User Service error"))
-
-        return response.get("user")
+        if not isinstance(response, dict) or response.get("success") is not True:
+            raise RuntimeError("User Service authorization response unavailable")
+        user = response.get("user")
+        if user is None:
+            return None
+        if (
+            not isinstance(user, dict)
+            or user.get("id") != user_id
+            or not isinstance(user.get("role"), str)
+            or not isinstance(user.get("is_active"), bool)
+        ):
+            raise RuntimeError("Malformed User Service authorization response")
+        return user
 
     async def get_users_by_ids(self, user_ids: list[int]) -> list[dict]:
         response = await self.rpc_client.call(

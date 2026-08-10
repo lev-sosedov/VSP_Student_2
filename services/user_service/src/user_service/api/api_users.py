@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.security.permissions import require_admin, require_self_or_admin
 from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
-from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import get_db
 from user_service.services.service_user import UserService
@@ -13,7 +12,8 @@ from user_service.schemas.schemas_user import (
     UserCreate,
     UserResponse,
     UserUpdate,
-    UserRoleUpdate
+    UserRoleUpdate,
+    ScopedStaffResponse
 )
 
 
@@ -78,6 +78,29 @@ async def get_public_teachers(
     service = UserService(db)
 
     return await service.get_public_teachers()
+
+
+@router.get("/staff/scoped", response_model=list[ScopedStaffResponse])
+async def get_scoped_staff(
+    _principal: CurrentPrincipal = Depends(get_current_principal),
+    db: AsyncSession = Depends(get_db),
+):
+    users = await UserService(db).get_active_staff()
+    result = []
+    for user in users:
+        role = user.role.value if hasattr(user.role, "value") else str(user.role)
+        name_parts = (
+            (user.user_name, user.last_name)
+            if role.lower() in {"admin", "teacher", "parent"}
+            else (user.first_name, user.user_name)
+        )
+        display_name = " ".join(str(value).strip() for value in name_parts if value and str(value).strip())
+        result.append(ScopedStaffResponse(
+            user_id=user.id, role=user.role,
+            display_name=display_name or ("\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440" if role.lower() == "admin" else "\u041f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c"),
+            avatar_url=user.avatar_url, is_active=True,
+        ))
+    return result
 
 
 @router.get(
