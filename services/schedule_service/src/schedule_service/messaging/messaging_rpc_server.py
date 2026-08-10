@@ -179,12 +179,43 @@ class ScheduleRpcServer:
         self,
         payload: dict[str, Any]
     ) -> dict[str, Any]:
-        lesson_id = payload.get("lesson_id")
-
-        if lesson_id is None:
+        raw_lesson_id = payload.get("lesson_id")
+        if raw_lesson_id is None:
             return {
                 "success": False,
                 "error": "lesson_id is required"
+            }
+
+        try:
+            lesson_id = int(raw_lesson_id)
+            if lesson_id <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            return {
+                "success": False,
+                "error": "lesson_id must be a positive integer"
+            }
+
+        async with AsyncSessionLocal() as session:
+            lesson = await session.get(LessonSchedule, lesson_id)
+            if lesson is None:
+                return {"success": True, "lesson": None}
+
+            return {
+                "success": True,
+                "lesson": {
+                    "id": lesson.id,
+                    "group_id": lesson.group_id,
+                    "teacher_id": lesson.teacher_id,
+                    "room_id": lesson.room_id,
+                    "template_id": lesson.template_id,
+                    "status": self.serialize_value(lesson.status),
+                    "lesson_type": self.serialize_value(lesson.lesson_type),
+                    "is_extra": lesson.is_extra,
+                    "lesson_date": lesson.lesson_date.isoformat(),
+                    "start_time": lesson.start_time.isoformat(),
+                    "end_time": lesson.end_time.isoformat(),
+                },
             }
 
     async def get_lesson_context(
@@ -210,57 +241,6 @@ class ScheduleRpcServer:
                 "group_id": lesson.group_id,
                 "teacher_id": lesson.teacher_id,
                 "status": self.serialize_value(lesson.status),
-            }
-
-        try:
-            lesson_id = int(lesson_id)
-
-        except (TypeError, ValueError):
-            return {
-                "success": False,
-                "error": "lesson_id must be an integer"
-            }
-
-        async with AsyncSessionLocal() as session:
-            query = select(LessonSchedule).where(
-                LessonSchedule.id == lesson_id
-            )
-
-            result = await session.execute(query)
-
-            lesson = result.scalar_one_or_none()
-
-            if lesson is None:
-                return {
-                    "success": True,
-                    "lesson": None
-                }
-
-            return {
-                "success": True,
-                "lesson": {
-                    "id": lesson.id,
-                    "group_id": lesson.group_id,
-                    "teacher_id": lesson.teacher_id,
-                    "room_id": lesson.room_id,
-                    "template_id": lesson.template_id,
-                    "status": self.serialize_value(
-                        lesson.status
-                    ),
-                    "lesson_type": self.serialize_value(
-                        lesson.lesson_type
-                    ),
-                    "is_extra": lesson.is_extra,
-                    "lesson_date": (
-                        lesson.lesson_date.isoformat()
-                    ),
-                    "start_time": (
-                        lesson.start_time.isoformat()
-                    ),
-                    "end_time": (
-                        lesson.end_time.isoformat()
-                    )
-                }
             }
 
     # =====================================================
