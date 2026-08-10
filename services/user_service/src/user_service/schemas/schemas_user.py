@@ -95,3 +95,11 @@ class UserStatusUpdate(BaseModel):
 class UserPasswordUpdate(BaseModel):
     old_password: str
     new_password: str
+
+
+class ScopedStaffResponse(BaseModel):
+    user_id: int
+    role: RoleType
+    display_name: str
+    avatar_url: Optional[str]
+    is_active: bool

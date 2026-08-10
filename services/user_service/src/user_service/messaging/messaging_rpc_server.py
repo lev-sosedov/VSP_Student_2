@@ -123,6 +123,9 @@ class UserRpcServer:
                         )
                     )
 
+                elif method == "users.get_chat_profiles_by_ids":
+                    response = await self.get_chat_profiles_by_ids(payload)
+
                 elif method == "users.get_active_ids":
                     response = (
                         await self.get_active_user_ids(
@@ -354,6 +357,39 @@ class UserRpcServer:
             "users": users,
             "total": len(users)
         }
+
+    async def get_chat_profiles_by_ids(self, payload: dict) -> dict:
+        """Return only safe chat profile fields for known user ids."""
+        raw_ids = payload.get("user_ids") if isinstance(payload, dict) else None
+        if not isinstance(raw_ids, list) or len(raw_ids) > 500:
+            return {"success": False, "users": [], "error": "invalid_request"}
+        parsed_ids: list[int] = []
+        for raw_id in raw_ids:
+            if isinstance(raw_id, bool):
+                return {"success": False, "users": [], "error": "invalid_request"}
+            try:
+                user_id = int(raw_id)
+            except (TypeError, ValueError):
+                return {"success": False, "users": [], "error": "invalid_request"}
+            if user_id <= 0:
+                return {"success": False, "users": [], "error": "invalid_request"}
+            if user_id not in parsed_ids:
+                parsed_ids.append(user_id)
+        async with AsyncSessionLocal() as session:
+            users = await UserRepository(session).get_by_ids(parsed_ids)
+        profiles = []
+        for user in users:
+            role = user.role.value if hasattr(user.role, "value") else str(user.role)
+            profiles.append({
+                "id": user.id,
+                "role": role,
+                "user_name": user.user_name,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "avatar_url": user.avatar_url,
+                "is_active": user.is_active is True,
+            })
+        return {"success": True, "users": profiles}
 
     # =================================================
     # GET ACTIVE VERIFIED USER IDS

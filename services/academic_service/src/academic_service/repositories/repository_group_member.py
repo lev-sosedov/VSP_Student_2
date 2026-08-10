@@ -162,11 +162,13 @@ class GroupMemberRepository:
     # получить преподавателя группы
     async def get_teacher(self, group_id: int):
         result = await self.db.execute(
-            select(GroupMember).where(
+            select(GroupMember)
+            .where(
                 GroupMember.group_id == group_id,
                 GroupMember.role == "teacher",
-                GroupMember.is_active == True
+                GroupMember.is_active.is_(True),
             )
+            .order_by(GroupMember.id.asc())
+            .limit(1)
         )
-
-        return result.scalar_one_or_none()
+        return result.scalars().first()

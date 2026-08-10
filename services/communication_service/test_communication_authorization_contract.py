@@ -55,5 +55,5 @@ def test_websocket_accepts_access_token_via_subprotocol_without_query_token():
 def test_scoped_chat_participant_profiles_require_chat_membership():
     source = Path("services/communication_service/src/communication_service/api/api_chat.py").read_text(encoding="utf-8")
     assert "/{chat_id}/participants" in source
-    assert "users.get_by_ids" in source
+    assert "users.get_chat_profiles_by_ids" in source
     assert "Depends(require_chat_member)" in source

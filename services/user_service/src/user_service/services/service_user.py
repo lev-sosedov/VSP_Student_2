@@ -99,6 +99,9 @@ class UserService:
             offset
         )
 
+    async def get_active_staff(self):
+        return await self.repo.get_active_staff()
+
     async def get_public_teachers(self):
         return await self.repo.get_public_teachers()
 

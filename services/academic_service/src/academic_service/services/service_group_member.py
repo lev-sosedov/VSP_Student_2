@@ -78,6 +78,12 @@ class GroupMemberService:
 
         return await self.repo.get_teachers(group_id)
 
+    async def get_teacher(self, group_id: int):
+        teachers = await self.get_teachers(group_id)
+        # Legacy data may contain multiple active memberships; keep the
+        # endpoint deterministic instead of using scalar_one_or_none().
+        return teachers[0] if teachers else None
+
     # список участников группы
     async def get_group_members(self, group_id: int):
 

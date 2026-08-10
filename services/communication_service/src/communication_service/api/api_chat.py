@@ -381,7 +381,7 @@ async def get_chat_participants_endpoint(
     if not user_ids:
         return ChatParticipantListResponse(items=[])
     response = await communication_rpc_client.call_user(
-        method="users.get_by_ids", payload={"user_ids": user_ids}
+        method="users.get_chat_profiles_by_ids", payload={"user_ids": user_ids}
     )
     if (
         not isinstance(response, dict)
@@ -397,7 +397,11 @@ async def get_chat_participants_endpoint(
     items: list[ChatParticipantResponse] = []
     for user_id in user_ids:
         profile = profiles.get(user_id)
-        if profile is None or not isinstance(profile.get("role"), str):
+        if (
+            profile is None
+            or not isinstance(profile.get("role"), str)
+            or profile.get("is_active") is not True
+        ):
             continue
         role = profile["role"].lower()
         name = " ".join(
@@ -407,7 +411,7 @@ async def get_chat_participants_endpoint(
                 profile.get("user_name") if role == "student" else profile.get("last_name"),
             )
             if value and str(value).strip()
-        ) or ("?????????????" if role == "teacher" else "????????????")
+        ) or {"admin": "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440", "teacher": "\u041f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c"}.get(role, f"\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u2116{user_id}")
         items.append(ChatParticipantResponse(
             user_id=user_id, role=role, display_name=name,
             avatar_url=profile.get("avatar_url"),

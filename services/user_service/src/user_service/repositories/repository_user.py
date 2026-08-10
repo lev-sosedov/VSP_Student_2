@@ -40,6 +40,14 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_ids(self, user_ids: list[int]):
+        if not user_ids:
+            return []
+        result = await self.db.execute(
+            select(User).where(User.id.in_(user_ids)).order_by(User.id)
+        )
+        return list(result.scalars().all())
+
     async def get_by_auth_id(self, auth_user_id: int):
         result = await self.db.execute(
             select(User).where(User.auth_id == auth_user_id).limit(2)
@@ -61,6 +69,14 @@ class UserRepository:
         )
 
         return result.scalars().all()
+
+    async def get_active_staff(self):
+        result = await self.db.execute(
+            select(User)
+            .where(User.role.in_([RoleType.ADMIN, RoleType.TEACHER]), User.is_active.is_(True))
+            .order_by(User.role.asc(), User.first_name.asc(), User.user_name.asc(), User.last_name.asc(), User.id.asc())
+        )
+        return list(result.scalars().all())
 
     async def get_public_teachers(self):
         result = await self.db.execute(
