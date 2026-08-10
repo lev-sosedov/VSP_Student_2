@@ -26,6 +26,7 @@ from common.security.dependencies import get_current_principal
 from common.security.principal import CurrentPrincipal
 from content_service.api.authorization import require_lesson_role
 from content_service.api.authorization import filter_lesson_collection
+from content_service.api.authorization import require_parent_student_group, require_parent_lesson_group
 
 router = APIRouter(
     prefix="/homeworks",
@@ -137,6 +138,36 @@ async def get_homeworks_endpoint(
 # Получить задание конкретного занятия
 # Этот маршрут должен быть до /{homework_id}
 # =====================================================
+
+@router.get(
+    "/parent/children/{student_id}/groups/{group_id}",
+    response_model=HomeworkListResponse,
+    summary="Get published homework for a child group",
+)
+async def get_parent_child_group_homeworks_endpoint(
+    student_id: int,
+    group_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if student_id <= 0 or group_id <= 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+    await require_parent_student_group(principal, student_id, group_id)
+    service = HomeworkService(session=session)
+    homeworks, _ = await service.get_list(group_id=group_id, is_published=True, is_active=True, skip=0, limit=500)
+    visible = []
+    for homework in homeworks:
+        try:
+            await require_parent_lesson_group(principal, student_id, group_id, homework.lesson_id)
+        except HTTPException as error:
+            if error.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}:
+                continue
+            raise
+        visible.append(homework)
+    items = visible[skip:skip + limit]
+    return HomeworkListResponse(total=len(visible), items=items)
 
 @router.get(
     "/lesson/{lesson_id}",

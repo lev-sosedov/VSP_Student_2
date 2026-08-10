@@ -33,6 +33,7 @@ from content_service.services.service_homework_submission import (
 from content_service.api.authorization import require_content_request
 from content_service.api.authorization import require_lesson_role
 from content_service.api.authorization import filter_submission_collection
+from content_service.api.authorization import require_parent_student_group, require_parent_lesson_group
 from content_service.models.model_homework import Homework
 
 router = APIRouter(
@@ -165,6 +166,39 @@ async def get_homework_submissions_endpoint(
 # Получить работы по домашнему заданию
 # До маршрута /{submission_id}
 # =====================================================
+
+@router.get(
+    "/parent/children/{student_id}/groups/{group_id}",
+    response_model=HomeworkSubmissionListResponse,
+    summary="Get child submissions for a group",
+)
+async def get_parent_child_group_submissions_endpoint(
+    student_id: int,
+    group_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if student_id <= 0 or group_id <= 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
+    await require_parent_student_group(principal, student_id, group_id)
+    service = HomeworkSubmissionService(session=session)
+    submissions, _ = await service.get_list(student_id=student_id, group_id=group_id, skip=0, limit=500)
+    visible = []
+    for submission in submissions:
+        homework = await session.get(Homework, submission.homework_id)
+        if homework is None or not homework.is_published or not homework.is_active:
+            continue
+        try:
+            await require_parent_lesson_group(principal, student_id, group_id, homework.lesson_id)
+        except HTTPException as error:
+            if error.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}:
+                continue
+            raise
+        visible.append(submission)
+    items = visible[skip:skip + limit]
+    return HomeworkSubmissionListResponse(total=len(visible), items=items)
 
 @router.get(
     "/homework/{homework_id}",
