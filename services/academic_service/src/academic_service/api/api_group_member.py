@@ -340,11 +340,17 @@ async def get_teacher(
     except HTTPException:
         raise
 
-    except Exception as e:
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Teacher authorization unavailable",
+        ) from None
+
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+            detail="Unable to resolve group teacher",
+        ) from None
 
 
 # =========================

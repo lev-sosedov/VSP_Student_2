@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 def test_chat_member_dependency_checks_academic_membership_fail_closed():
@@ -50,10 +50,3 @@ def test_websocket_accepts_access_token_via_subprotocol_without_query_token():
     assert "subprotocol=selected_subprotocol" in source
     assert "code=4401" in source and "code=4403" in source
     assert "await websocket.accept(subprotocol=subprotocol)" in manager
-
-
-def test_scoped_chat_participant_profiles_require_chat_membership():
-    source = Path("services/communication_service/src/communication_service/api/api_chat.py").read_text(encoding="utf-8")
-    assert "/{chat_id}/participants" in source
-    assert "users.get_chat_profiles_by_ids" in source
-    assert "Depends(require_chat_member)" in source

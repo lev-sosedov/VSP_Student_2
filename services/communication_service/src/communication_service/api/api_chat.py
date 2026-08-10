@@ -31,6 +31,7 @@ from communication_service.core.core_config import settings
 from communication_service.services.service_chat import (
     ChatService
 )
+from communication_service.repositories.repository_chat import ChatRepository
 from communication_service.services.service_message_read import (
     MessageReadService
 )
@@ -372,16 +373,24 @@ async def get_chat_participants_endpoint(
     _principal: CurrentPrincipal = Depends(require_chat_member),
     session: AsyncSession = Depends(get_session),
 ):
-    from communication_service.repositories.repository_chat_member import ChatMemberRepository
+    chat = await ChatRepository(session=session).get_by_id(chat_id, with_members=True)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found")
 
-    members = await ChatMemberRepository(session=session).get_list(
-        chat_id=chat_id, is_active=True, skip=0, limit=500
-    )
-    user_ids = [member.user_id for member in members[0]]
-    if not user_ids:
+    candidate_ids: list[int] = []
+    for user_id in [
+        *(member.user_id for member in (chat.members or []) if member.is_active),
+        chat.participant_one_id,
+        chat.participant_two_id,
+        chat.created_by,
+    ]:
+        if isinstance(user_id, int) and user_id > 0 and user_id not in candidate_ids:
+            candidate_ids.append(user_id)
+    if not candidate_ids:
         return ChatParticipantListResponse(items=[])
+
     response = await communication_rpc_client.call_user(
-        method="users.get_chat_profiles_by_ids", payload={"user_ids": user_ids}
+        method="users.get_chat_profiles_by_ids", payload={"user_ids": candidate_ids}
     )
     if (
         not isinstance(response, dict)
@@ -389,19 +398,24 @@ async def get_chat_participants_endpoint(
         or not isinstance(response.get("users"), list)
     ):
         raise HTTPException(status_code=503, detail="Chat participant profiles unavailable")
-    profiles = {
-        profile.get("id"): profile
-        for profile in response["users"]
-        if isinstance(profile, dict) and isinstance(profile.get("id"), int)
-    }
-    items: list[ChatParticipantResponse] = []
-    for user_id in user_ids:
-        profile = profiles.get(user_id)
+
+    profiles = {}
+    for profile in response["users"]:
+        if not isinstance(profile, dict):
+            raise HTTPException(status_code=503, detail="Chat participant profiles unavailable")
         if (
-            profile is None
+            not isinstance(profile.get("id"), int)
             or not isinstance(profile.get("role"), str)
-            or profile.get("is_active") is not True
+            or not isinstance(profile.get("is_active"), bool)
         ):
+            raise HTTPException(status_code=503, detail="Chat participant profiles unavailable")
+        if profile["is_active"]:
+            profiles[profile["id"]] = profile
+
+    items: list[ChatParticipantResponse] = []
+    for user_id in candidate_ids:
+        profile = profiles.get(user_id)
+        if profile is None:
             continue
         role = profile["role"].lower()
         name = " ".join(
@@ -414,8 +428,7 @@ async def get_chat_participants_endpoint(
         ) or {"admin": "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440", "teacher": "\u041f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c"}.get(role, f"\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u2116{user_id}")
         items.append(ChatParticipantResponse(
             user_id=user_id, role=role, display_name=name,
-            avatar_url=profile.get("avatar_url"),
-            is_active=profile.get("is_active") is True,
+            avatar_url=profile.get("avatar_url"), is_active=True,
         ))
     return ChatParticipantListResponse(items=items)
 
