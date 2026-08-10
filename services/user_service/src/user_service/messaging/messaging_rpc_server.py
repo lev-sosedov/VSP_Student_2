@@ -15,6 +15,7 @@ from user_service.messaging.messaging_config import (
 from user_service.models.model_user import (
     User
 )
+from user_service.models.model_parent_student import ParentStudentLink
 from user_service.repositories.repository_user import (
     UserRepository
 )
@@ -128,6 +129,9 @@ class UserRpcServer:
                         )
                     )
 
+                elif method == "parent.authorization.has_student":
+                    response = await self.parent_has_student(payload)
+
                 elif method == "identity.resolve_by_auth_id":
                     response = await self.resolve_identity_by_auth_id(
                         payload=payload
@@ -142,7 +146,7 @@ class UserRpcServer:
                         )
                     }
 
-            except Exception as error:
+            except Exception:
                 response = {
                     "success": False,
                     "error": "RPC request failed",
@@ -380,6 +384,33 @@ class UserRpcServer:
             "user_ids": user_ids,
             "total": len(user_ids)
         }
+
+    async def parent_has_student(self, payload: dict) -> dict:
+        """Return only the authorization decision for an active link."""
+        try:
+            raw_parent_user_id = payload["parent_user_id"]
+            raw_student_user_id = payload["student_user_id"]
+            if isinstance(raw_parent_user_id, bool) or isinstance(raw_student_user_id, bool):
+                raise ValueError("boolean identifier")
+            parent_user_id = int(raw_parent_user_id)
+            student_user_id = int(raw_student_user_id)
+        except (KeyError, TypeError, ValueError):
+            return {"success": False, "authorized": False, "reason": "invalid_request"}
+        if parent_user_id <= 0 or student_user_id <= 0:
+            return {"success": False, "authorized": False, "reason": "invalid_request"}
+        try:
+            async with AsyncSessionLocal() as session:
+                row = (await session.execute(select(ParentStudentLink).where(
+                    ParentStudentLink.parent_id == parent_user_id,
+                    ParentStudentLink.student_id == student_user_id,
+                    ParentStudentLink.is_active.is_(True),
+                ))).scalar_one_or_none()
+        except Exception:
+            return {"success": False, "authorized": False, "reason": "authorization_unavailable"}
+        response: dict[str, object] = {"success": True, "authorized": row is not None, "parent_user_id": parent_user_id, "student_user_id": student_user_id}
+        if row is None:
+            response["reason"] = "parent_student_link_not_found"
+        return response
 
     # =================================================
     # SERIALIZE USER

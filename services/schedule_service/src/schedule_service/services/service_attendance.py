@@ -48,6 +48,7 @@ async def get_attendance_records(
     session: AsyncSession,
     lesson_id: int | None = None,
     student_id: int | None = None,
+    group_id: int | None = None,
     attendance_status: AttendanceStatus | None = None,
     marked_by: int | None = None,
     skip: int = 0,
@@ -63,6 +64,14 @@ async def get_attendance_records(
     if student_id is not None:
         filters.append(
             Attendance.student_id == student_id
+        )
+
+
+    if group_id is not None:
+        filters.append(
+            Attendance.lesson_id.in_(
+                select(LessonSchedule.id).where(LessonSchedule.group_id == group_id)
+            )
         )
 
     if attendance_status is not None:

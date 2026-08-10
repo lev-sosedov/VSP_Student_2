@@ -1,3 +1,4 @@
+from common.parent_authorization import ParentAuthorizationClient
 from academic_service.messaging.messaging_rpc_client import RabbitRpcClient
 
 
@@ -23,3 +24,10 @@ class UserRpcClient:
             raise ValueError(response.get("error", "User Service error"))
 
         return response.get("users", [])
+
+    async def has_parent_student_link(self, parent_user_id: int, student_user_id: int) -> bool:
+        """Fail-closed check backed by User Service's parent link table."""
+        return await ParentAuthorizationClient(self.rpc_client.call).has_student(
+            parent_user_id,
+            student_user_id,
+        )

@@ -5,6 +5,7 @@ from common.security.dependencies import get_current_principal
 
 from common.security.principal import CurrentPrincipal
 from common.utils.enum_role import RoleType
+from common.parent_authorization import ParentStudentGroupAuthorizationClient
 from content_service.messaging.messaging_rpc_client import rabbit_rpc_client
 from content_service.db.db_session import AsyncSessionLocal
 from content_service.models.model_homework import Homework
@@ -50,6 +51,33 @@ async def require_student_self(principal: CurrentPrincipal, student_id: int) -> 
     if principal.role is not RoleType.ADMIN and principal.user_id != student_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student identity mismatch")
 
+
+async def require_parent_student_group(principal: CurrentPrincipal, student_id: int, group_id: int) -> None:
+    """Authorize a parent for one child and one academic group."""
+    if principal.role is RoleType.ADMIN:
+        return
+    if principal.role is not RoleType.PARENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Parent role required")
+    response = await ParentStudentGroupAuthorizationClient(rabbit_rpc_client.call_academic).check(
+        principal.user_id, student_id, group_id
+    )
+    if response is None or response.get("success") is not True:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Parent authorization unavailable")
+    if response.get("authorized") is not True:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Parent-child group authorization denied")
+
+
+async def require_parent_lesson_group(principal: CurrentPrincipal, student_id: int, group_id: int, lesson_id: int) -> dict[str, Any]:
+    await require_parent_student_group(principal, student_id, group_id)
+    try:
+        context = await lesson_context(lesson_id)
+    except HTTPException as error:
+        if error.status_code == status.HTTP_404_NOT_FOUND:
+            raise
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Schedule authorization unavailable") from error
+    if context.get("group_id") != group_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Lesson does not belong to requested group")
+    return context
 
 async def require_content_request(request: Request, principal: CurrentPrincipal = Depends(get_current_principal)) -> CurrentPrincipal:
     """Common fail-closed guard; endpoint handlers perform precise ownership checks."""

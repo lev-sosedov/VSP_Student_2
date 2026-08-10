@@ -33,6 +33,7 @@ from schedule_service.api.authorization import (
     require_lesson_teacher_or_admin, require_student_self_or_admin,
 )
 from common.security.dependencies import get_current_principal
+from schedule_service.api.authorization import require_parent_student, require_parent_student_group
 from common.security.principal import CurrentPrincipal
 from schedule_service.api.authorization import _membership
 from schedule_service.messaging.messaging_rpc_client import rabbit_rpc_client
@@ -114,6 +115,32 @@ async def create_attendance_endpoint(
         ) from error
 
 
+
+@router.get(
+    "/parent/children/{student_id}",
+    response_model=AttendanceListResponse,
+    summary="Attendance for a linked child",
+)
+async def get_parent_child_attendance_endpoint(
+    student_id: int,
+    group_id: int | None = Query(default=None, gt=0),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if group_id is None:
+        await require_parent_student(principal, student_id)
+    else:
+        await require_parent_student_group(principal, student_id, group_id)
+    records, total = await get_attendance_records(
+        session=session,
+        student_id=student_id,
+        group_id=group_id,
+        skip=skip,
+        limit=limit,
+    )
+    return AttendanceListResponse(total=total, items=records)
 @router.get(
     "",
     response_model=AttendanceListResponse,

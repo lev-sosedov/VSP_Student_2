@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 
 from academic_service.models.models_group_member import GroupMember
+from academic_service.models.models_group import Group
 
 
 class GroupMemberRepository:
@@ -65,6 +66,19 @@ class GroupMemberRepository:
         return result.scalars().all()
 
     # Проверка состоит ли пользователь в группе
+    async def get_active_student_memberships(self, student_user_id: int):
+        result = await self.db.execute(
+            select(GroupMember)
+            .join(Group, Group.id == GroupMember.group_id)
+            .where(
+                GroupMember.user_id == student_user_id,
+                GroupMember.role == "student",
+                GroupMember.is_active.is_(True),
+                Group.is_active.is_(True),
+            )
+            .order_by(GroupMember.id)
+        )
+        return result.scalars().all()
     async def exists(self, group_id: int, user_id: int):
         result = await self.db.execute(select(GroupMember.id)
                                        .where(GroupMember.group_id == group_id,

@@ -23,6 +23,7 @@ from schedule_service.api.authorization import (
     require_lesson_access,
     require_lesson_teacher_or_admin,
 )
+from schedule_service.api.authorization import require_parent_student_group
 from schedule_service.models.model_lesson_schedule import LessonSchedule
 from schedule_service.schemas.schemas_lesson_schedule import (
     LessonCancelRequest,
@@ -41,7 +42,6 @@ from schedule_service.services.service_lesson_schedule import (
     create_lesson,
     create_schedule_change,
     find_lesson_conflict,
-    get_active_room,
     get_active_template,
     get_lesson_by_id,
     get_lessons,
@@ -333,7 +333,7 @@ async def get_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -365,6 +365,37 @@ async def get_lessons_endpoint(
 # Этот маршрут должен находиться раньше /{lesson_id}
 # =====================================================
 
+
+@router.get(
+    "/parent/children/{student_id}/groups/{group_id}",
+    response_model=LessonScheduleListResponse,
+    summary="Schedule for a linked child's group",
+)
+async def get_parent_child_group_lessons_endpoint(
+    student_id: int,
+    group_id: int,
+    lesson_date_from: date | None = Query(default=None),
+    lesson_date_to: date | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if student_id <= 0 or group_id <= 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    await require_parent_student_group(principal, student_id, group_id)
+    if lesson_date_from is not None and lesson_date_to is not None and lesson_date_to < lesson_date_from:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="End date cannot be earlier than start date",
+        )
+    lessons, total = await get_lessons(
+        session=session,
+        group_id=group_id,
+        lesson_date_from=lesson_date_from,
+        lesson_date_to=lesson_date_to,
+        skip=0,
+        limit=500,
+    )
+    return LessonScheduleListResponse(total=total, items=lessons)
 @router.get(
     "/group/{group_id}",
     response_model=LessonScheduleListResponse,
@@ -387,7 +418,7 @@ async def get_group_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -437,7 +468,7 @@ async def get_teacher_lessons_endpoint(
         and lesson_date_to < lesson_date_from
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Конечная дата не может быть "
                 "раньше начальной"
@@ -573,7 +604,7 @@ async def update_lesson_endpoint(
 
     if new_end_time <= new_start_time:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
                 "Время окончания должно быть позже "
                 "времени начала"

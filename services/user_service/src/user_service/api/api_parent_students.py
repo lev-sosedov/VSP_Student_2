@@ -6,6 +6,10 @@ from fastapi import (
     status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
+from common.security.dependencies import get_current_principal
+from common.security.permissions import require_admin
+from common.security.principal import CurrentPrincipal
+from common.utils.enum_role import RoleType
 
 from user_service.db.db_session import get_db
 from user_service.schemas.schemas_parent_student import (
@@ -33,9 +37,9 @@ def create_http_exception(
     normalized = message.lower()
 
     if (
-        "уже привязан" in normalized
-        or "уже активна" in normalized
-        or "уже отключена" in normalized
+        "СѓР¶Рµ РїСЂРёРІСЏР·Р°РЅ" in normalized
+        or "СѓР¶Рµ Р°РєС‚РёРІРЅР°" in normalized
+        or "СѓР¶Рµ РѕС‚РєР»СЋС‡РµРЅР°" in normalized
     ):
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -43,8 +47,8 @@ def create_http_exception(
         )
 
     if (
-        "не найден" in normalized
-        or "не найдена" in normalized
+        "РЅРµ РЅР°Р№РґРµРЅ" in normalized
+        or "РЅРµ РЅР°Р№РґРµРЅР°" in normalized
     ):
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -61,11 +65,12 @@ def create_http_exception(
     "/",
     response_model=ParentStudentLinkResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Привязать родителя к студенту",
+    summary="РџСЂРёРІСЏР·Р°С‚СЊ СЂРѕРґРёС‚РµР»СЏ Рє СЃС‚СѓРґРµРЅС‚Сѓ",
 )
 async def create_parent_student_link(
     data: ParentStudentLinkCreate,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -77,26 +82,33 @@ async def create_parent_student_link(
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.get(
     "/{link_id}",
     response_model=ParentStudentLinkResponse,
     status_code=status.HTTP_200_OK,
-    summary="Получить связь по ID",
+    summary="РџРѕР»СѓС‡РёС‚СЊ СЃРІСЏР·СЊ РїРѕ ID",
 )
 async def get_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     service = ParentStudentService(db)
 
     try:
-        return await service.get_link(link_id)
+        link = await service.get_link(link_id)
+        if principal.role is not RoleType.ADMIN and principal.user_id not in {
+            link.parent_id,
+            link.student_id,
+        }:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return link
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.get(
@@ -105,18 +117,23 @@ async def get_parent_student_link(
         ParentStudentWithStudentResponse
     ],
     status_code=status.HTTP_200_OK,
-    summary="Получить детей родителя",
+    summary="РџРѕР»СѓС‡РёС‚СЊ РґРµС‚РµР№ СЂРѕРґРёС‚РµР»СЏ",
 )
 async def get_parent_children(
     parent_id: int,
     active_only: bool = Query(
         default=True,
         description=(
-            "Показывать только активные связи"
+            "РџРѕРєР°Р·С‹РІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РєС‚РёРІРЅС‹Рµ СЃРІСЏР·Рё"
         ),
     ),
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
+    if principal.role is not RoleType.ADMIN and (
+        principal.role is not RoleType.PARENT or parent_id != principal.user_id
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     service = ParentStudentService(db)
 
     try:
@@ -126,7 +143,7 @@ async def get_parent_children(
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.get(
@@ -135,40 +152,48 @@ async def get_parent_children(
         ParentStudentWithParentResponse
     ],
     status_code=status.HTTP_200_OK,
-    summary="Получить родителей студента",
+    summary="РџРѕР»СѓС‡РёС‚СЊ СЂРѕРґРёС‚РµР»РµР№ СЃС‚СѓРґРµРЅС‚Р°",
 )
 async def get_student_parents(
     student_id: int,
     active_only: bool = Query(
         default=True,
         description=(
-            "Показывать только активные связи"
+            "РџРѕРєР°Р·С‹РІР°С‚СЊ С‚РѕР»СЊРєРѕ Р°РєС‚РёРІРЅС‹Рµ СЃРІСЏР·Рё"
         ),
     ),
     db: AsyncSession = Depends(get_db),
+    principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     service = ParentStudentService(db)
 
     try:
+        if principal.role is not RoleType.ADMIN and principal.user_id != student_id:
+            if principal.role is not RoleType.PARENT:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+            links = await service.get_student_parents(student_id=student_id, active_only=True)
+            if not any(link.parent_id == principal.user_id for link in links):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
         return await service.get_student_parents(
             student_id=student_id,
             active_only=active_only,
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.patch(
     "/{link_id}",
     response_model=ParentStudentLinkResponse,
     status_code=status.HTTP_200_OK,
-    summary="Изменить тип родственной связи",
+    summary="РР·РјРµРЅРёС‚СЊ С‚РёРї СЂРѕРґСЃС‚РІРµРЅРЅРѕР№ СЃРІСЏР·Рё",
 )
 async def update_parent_student_link(
     link_id: int,
     data: ParentStudentLinkUpdate,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -179,18 +204,19 @@ async def update_parent_student_link(
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.patch(
     "/{link_id}/activate",
     response_model=ParentStudentLinkResponse,
     status_code=status.HTTP_200_OK,
-    summary="Восстановить связь",
+    summary="Р’РѕСЃСЃС‚Р°РЅРѕРІРёС‚СЊ СЃРІСЏР·СЊ",
 )
 async def activate_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -200,18 +226,19 @@ async def activate_parent_student_link(
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
 
 
 @router.delete(
     "/{link_id}",
     response_model=ParentStudentLinkResponse,
     status_code=status.HTTP_200_OK,
-    summary="Отключить связь родителя и студента",
+    summary="РћС‚РєР»СЋС‡РёС‚СЊ СЃРІСЏР·СЊ СЂРѕРґРёС‚РµР»СЏ Рё СЃС‚СѓРґРµРЅС‚Р°",
 )
 async def deactivate_parent_student_link(
     link_id: int,
     db: AsyncSession = Depends(get_db),
+    _principal: CurrentPrincipal = Depends(require_admin()),
 ):
     service = ParentStudentService(db)
 
@@ -221,4 +248,4 @@ async def deactivate_parent_student_link(
         )
 
     except ValueError as error:
-        raise create_http_exception(error)
+        raise create_http_exception(error) from error
