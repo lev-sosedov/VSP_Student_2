@@ -188,3 +188,19 @@ async def test_teacher_group_batch_rejects_inactive_group():
 
     with pytest.raises(PermissionError):
         await GroupMemberService(InactiveGroupRepo(), InactiveGroupRepo(), object()).get_teacher_group_students(4, 1)
+
+@pytest.mark.asyncio
+async def test_teacher_profile_rejects_student_left_at():
+    class Repo:
+        async def get_by_user(self, _teacher_id):
+            return [SimpleNamespace(group_id=1, role="teacher", is_active=True, left_at=None)]
+
+        async def get_by_group_user(self, _group_id, _student_id):
+            return SimpleNamespace(role="student", is_active=True, left_at="2026-01-01")
+
+    class Users:
+        async def get_user_by_id(self, _student_id):
+            return {"id": 7, "role": "student", "is_active": True}
+
+    with pytest.raises(PermissionError):
+        await GroupMemberService(Repo(), GroupRepo(), Users()).get_teacher_student_profile(4, 7)
