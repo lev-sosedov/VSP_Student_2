@@ -503,7 +503,14 @@ class UserRpcServer:
             "is_active": user.is_active,
             "is_account_verified": (
                 user.is_account_verified
-            )
+            ),
+            "user_name": user.user_name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "avatar_url": user.avatar_url,
+            "phone_number": user.phone_number,
+            "email": user.email,
+            "about": user.about,
         }
 
     # =================================================

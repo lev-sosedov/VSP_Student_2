@@ -117,3 +117,38 @@ async def test_user_rpc_malformed_profile_fails_closed():
 
     with pytest.raises(RuntimeError):
         await UserRpcClient(Rpc()).get_user_by_id(1002)
+
+@pytest.mark.asyncio
+async def test_group_students_uses_scoped_batch_profiles_and_skips_stale_users():
+    class Repo:
+        async def get_by_group(self, _group_id):
+            return [
+                SimpleNamespace(id=1, group_id=1, user_id=7, role="student", is_active=True, left_at=None),
+                SimpleNamespace(id=2, group_id=1, user_id=8, role="student", is_active=True, left_at=None),
+            ]
+
+    class Users:
+        async def get_users_by_ids(self, user_ids):
+            assert user_ids == [7, 8]
+            return [
+                {"id": 7, "role": "student", "is_active": True, "user_name": "Student", "first_name": "One"},
+                {"id": 8, "role": "student", "is_active": False},
+            ]
+
+    result = await GroupMemberService(Repo(), GroupRepo(), Users()).get_group_students(1)
+    assert result["total"] == 1
+    assert result["items"][0]["user_id"] == 7
+
+
+@pytest.mark.asyncio
+async def test_group_students_fails_closed_on_malformed_batch_profile_response():
+    class Repo:
+        async def get_by_group(self, _group_id):
+            return [SimpleNamespace(id=1, group_id=1, user_id=7, role="student", is_active=True, left_at=None)]
+
+    class Users:
+        async def get_users_by_ids(self, _user_ids):
+            raise RuntimeError("malformed response")
+
+    with pytest.raises(RuntimeError, match="profile authorization unavailable"):
+        await GroupMemberService(Repo(), GroupRepo(), Users()).get_group_students(1)

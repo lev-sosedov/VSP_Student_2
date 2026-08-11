@@ -27,11 +27,20 @@ class UserRpcClient:
         response = await self.rpc_client.call(
             method="users.get_by_ids",
             payload={"user_ids": user_ids}, timeout=15)
-
-        if not response.get("success"):
-            raise ValueError(response.get("error", "User Service error"))
-
-        return response.get("users", [])
+        if not isinstance(response, dict) or response.get("success") is not True:
+            raise RuntimeError("User Service profile response unavailable")
+        users = response.get("users")
+        if not isinstance(users, list):
+            raise RuntimeError("Malformed User Service profile response")
+        for user in users:
+            if (
+                not isinstance(user, dict)
+                or not isinstance(user.get("id"), int)
+                or not isinstance(user.get("role"), str)
+                or not isinstance(user.get("is_active"), bool)
+            ):
+                raise RuntimeError("Malformed User Service profile response")
+        return users
 
     async def has_parent_student_link(self, parent_user_id: int, student_user_id: int) -> bool:
         """Fail-closed check backed by User Service's parent link table."""

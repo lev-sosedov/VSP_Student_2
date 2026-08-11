@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Any
-import asyncio
 
 from academic_service.clients.client_user_rpc import UserRpcClient
 from academic_service.repositories.repository_group_member import GroupMemberRepository
@@ -111,6 +110,23 @@ class GroupMemberService:
         if not await self.user_client.has_parent_student_link(parent_user_id, student_user_id):
             raise PermissionError("Parent is not linked to student")
         return await self.repo.get_active_student_memberships(student_user_id)
+    async def get_teacher_student_profile(self, teacher_id: int, student_id: int):
+        teacher_memberships = await self.repo.get_by_user(teacher_id)
+        allowed = False
+        for membership in teacher_memberships:
+            if membership.role != "teacher" or not membership.is_active:
+                continue
+            student_membership = await self.repo.get_by_group_user(membership.group_id, student_id)
+            if student_membership and student_membership.role == "student" and student_membership.is_active:
+                allowed = True
+                break
+        if not allowed:
+            raise PermissionError("Student is not in teacher's group")
+        profile = await self.user_client.get_user_by_id(student_id)
+        if profile is None or profile.get("is_active") is not True or profile.get("role", "").lower() != "student":
+            raise LookupError("Student profile not found")
+        return profile
+
     async def get_group_students(self, group_id: int):
         group = await self.group_repo.get_by_id(group_id)
 
@@ -135,57 +151,31 @@ class GroupMemberService:
                 "items": []
             }
 
-        user_results = await asyncio.gather(
-            *[
-                self.user_client.get_user_by_id(
-                    member.user_id
-                )
-                for member in student_members
-            ],
-            return_exceptions=True
-        )
-
-        items: list[dict[str, Any]] = []
-
-        for member, user_result in zip(
-            student_members,
-            user_results
-        ):
-            if isinstance(user_result, Exception):
-                print(
-                    "Failed to load student "
-                    f"{member.user_id}: {user_result}",
-                    flush=True
-                )
-
-                continue
-
-            if not user_result:
-                continue
-
-            items.append(
-                {
-                    "membership_id": member.id,
-                    "group_id": member.group_id,
-                    "user_id": member.user_id,
-
-                    "user_name": user_result.get(
-                        "user_name"
-                    ),
-                    "first_name": user_result.get(
-                        "first_name"
-                    ),
-                    "last_name": user_result.get(
-                        "last_name"
-                    ),
-                    "avatar_url": user_result.get(
-                        "avatar_url"
-                    ),
-
-                    "is_active": member.is_active,
-                    "joined_at": member.joined_at,
-                }
+        try:
+            profiles = await self.user_client.get_users_by_ids(
+                [member.user_id for member in student_members]
             )
+        except Exception as error:
+            raise RuntimeError("Student profile authorization unavailable") from error
+        profiles_by_id = {profile["id"]: profile for profile in profiles if profile.get("is_active") is True}
+        items: list[dict[str, Any]] = []
+        for member in student_members:
+            profile = profiles_by_id.get(member.user_id)
+            if profile is None:
+                continue
+            items.append({
+                "membership_id": member.id,
+                "group_id": member.group_id,
+                "user_id": member.user_id,
+                "user_name": profile.get("user_name"),
+                "first_name": profile.get("first_name"),
+                "last_name": profile.get("last_name"),
+                "avatar_url": profile.get("avatar_url"),
+                "phone_number": profile.get("phone_number"),
+                "email": profile.get("email"),
+                "about": profile.get("about"),
+                "is_active": member.is_active,
+            })
 
         items.sort(
             key=lambda item: (

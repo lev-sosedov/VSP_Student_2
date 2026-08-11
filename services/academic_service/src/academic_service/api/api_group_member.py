@@ -14,6 +14,7 @@ from academic_service.schemas.schemas_group_member import (
     GroupMemberLeave,
     GroupMemberTransfer,
     GroupStudentListResponse,
+    TeacherStudentProfileResponse,
 )
 
 from academic_service.core.core_dependencies import get_group_member_service
@@ -279,14 +280,18 @@ Academic Service получает записи участников группы
 )
 async def get_group_students(
         group_id: int,
-        service: GroupMemberService = Depends(
-            get_group_member_service
-        )
+        service: GroupMemberService = Depends(get_group_member_service),
+        principal: CurrentPrincipal = Depends(get_current_principal),
 ):
     try:
-        return await service.get_group_students(
-            group_id
-        )
+        if principal.role is not RoleType.ADMIN:
+            expected_role = "teacher" if principal.role is RoleType.TEACHER else "student" if principal.role is RoleType.STUDENT else None
+            if expected_role is None or not await service.is_member(group_id, principal.user_id):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+            member = await service.repo.get_by_group_user(group_id, principal.user_id)
+            if member is None or str(member.role).lower() != expected_role:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return await service.get_group_students(group_id)
 
     except ValueError as error:
         raise HTTPException(
@@ -296,6 +301,12 @@ async def get_group_students(
 
     except HTTPException:
         raise
+
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Student profile authorization unavailable",
+        ) from None
 
     except Exception as error:
         raise HTTPException(
@@ -307,6 +318,28 @@ async def get_group_students(
 # =========================
 # Получить преподавателя группы
 # =========================
+@router.get(
+    "/teacher/student/{student_id}",
+    response_model=TeacherStudentProfileResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_teacher_student_profile(
+    student_id: int,
+    service: GroupMemberService = Depends(get_group_member_service),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if principal.role is RoleType.ADMIN or principal.role is not RoleType.TEACHER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    try:
+        return await service.get_teacher_student_profile(principal.user_id, student_id)
+    except PermissionError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden") from None
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found") from None
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Student profile unavailable") from None
+
+
 @router.get(
     "/group/{group_id}/teacher",
     status_code=status.HTTP_200_OK,
