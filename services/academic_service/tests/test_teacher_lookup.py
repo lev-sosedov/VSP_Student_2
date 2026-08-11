@@ -15,7 +15,7 @@ from academic_service.services.service_group_member import GroupMemberService
 
 class GroupRepo:
     async def get_by_id(self, _group_id):
-        return SimpleNamespace(id=1)
+        return SimpleNamespace(id=1, is_active=True)
 
 
 @pytest.mark.asyncio
@@ -117,3 +117,90 @@ async def test_user_rpc_malformed_profile_fails_closed():
 
     with pytest.raises(RuntimeError):
         await UserRpcClient(Rpc()).get_user_by_id(1002)
+
+@pytest.mark.asyncio
+async def test_group_students_uses_scoped_batch_profiles_and_skips_stale_users():
+    class Repo:
+        async def get_by_group(self, _group_id):
+            return [
+                SimpleNamespace(id=1, group_id=1, user_id=7, role="student", is_active=True, left_at=None),
+                SimpleNamespace(id=2, group_id=1, user_id=8, role="student", is_active=True, left_at=None),
+            ]
+
+    class Users:
+        async def get_users_by_ids(self, user_ids):
+            assert user_ids == [7, 8]
+            return [
+                {"id": 7, "role": "student", "is_active": True, "user_name": "Student", "first_name": "One"},
+                {"id": 8, "role": "student", "is_active": False},
+            ]
+
+    result = await GroupMemberService(Repo(), GroupRepo(), Users()).get_group_students(1)
+    assert result["total"] == 1
+    assert result["items"][0]["user_id"] == 7
+    assert "phone_number" not in result["items"][0]
+    assert "email" not in result["items"][0]
+    assert "about" not in result["items"][0]
+
+
+@pytest.mark.asyncio
+async def test_group_students_fails_closed_on_malformed_batch_profile_response():
+    class Repo:
+        async def get_by_group(self, _group_id):
+            return [SimpleNamespace(id=1, group_id=1, user_id=7, role="student", is_active=True, left_at=None)]
+
+    class Users:
+        async def get_users_by_ids(self, _user_ids):
+            raise RuntimeError("malformed response")
+
+    with pytest.raises(RuntimeError, match="profile authorization unavailable"):
+        await GroupMemberService(Repo(), GroupRepo(), Users()).get_group_students(1)
+
+@pytest.mark.asyncio
+async def test_teacher_profile_requires_active_shared_memberships_and_group():
+    class Repo:
+        async def get_by_user(self, _teacher_id):
+            return [SimpleNamespace(group_id=1, role="teacher", is_active=True, left_at=None)]
+
+        async def get_by_group_user(self, group_id, _student_id):
+            return SimpleNamespace(group_id=group_id, role="student", is_active=True, left_at=None)
+
+    class Users:
+        async def get_user_by_id(self, _student_id):
+            return {"id": 7, "role": "student", "is_active": True}
+
+    service = GroupMemberService(Repo(), GroupRepo(), Users())
+    assert (await service.get_teacher_student_profile(4, 7))["id"] == 7
+
+    class LeftTeacherRepo(Repo):
+        async def get_by_user(self, _teacher_id):
+            return [SimpleNamespace(group_id=1, role="teacher", is_active=True, left_at="2026-01-01")]
+
+    with pytest.raises(PermissionError):
+        await GroupMemberService(LeftTeacherRepo(), GroupRepo(), Users()).get_teacher_student_profile(4, 7)
+
+
+@pytest.mark.asyncio
+async def test_teacher_group_batch_rejects_inactive_group():
+    class InactiveGroupRepo:
+        async def get_by_id(self, _group_id):
+            return SimpleNamespace(id=1, is_active=False)
+
+    with pytest.raises(PermissionError):
+        await GroupMemberService(InactiveGroupRepo(), InactiveGroupRepo(), object()).get_teacher_group_students(4, 1)
+
+@pytest.mark.asyncio
+async def test_teacher_profile_rejects_student_left_at():
+    class Repo:
+        async def get_by_user(self, _teacher_id):
+            return [SimpleNamespace(group_id=1, role="teacher", is_active=True, left_at=None)]
+
+        async def get_by_group_user(self, _group_id, _student_id):
+            return SimpleNamespace(role="student", is_active=True, left_at="2026-01-01")
+
+    class Users:
+        async def get_user_by_id(self, _student_id):
+            return {"id": 7, "role": "student", "is_active": True}
+
+    with pytest.raises(PermissionError):
+        await GroupMemberService(Repo(), GroupRepo(), Users()).get_teacher_student_profile(4, 7)

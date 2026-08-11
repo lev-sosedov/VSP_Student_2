@@ -103,3 +103,26 @@ class GroupStudentResponse(BaseModel):
 class GroupStudentListResponse(BaseModel):
     total: int
     items: list[GroupStudentResponse]
+
+class TeacherStudentProfileResponse(BaseModel):
+    id: int
+    role: str
+    user_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    about: Optional[str] = None
+    is_active: bool
+
+
+class TeacherGroupStudentResponse(GroupStudentResponse):
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    about: Optional[str] = None
+
+
+class TeacherGroupStudentListResponse(BaseModel):
+    total: int
+    items: list[TeacherGroupStudentResponse]
