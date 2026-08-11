@@ -15,6 +15,7 @@ from academic_service.schemas.schemas_group_member import (
     GroupMemberTransfer,
     GroupStudentListResponse,
     TeacherStudentProfileResponse,
+    TeacherGroupStudentListResponse,
 )
 
 from academic_service.core.core_dependencies import get_group_member_service
@@ -318,6 +319,25 @@ async def get_group_students(
 # =========================
 # Получить преподавателя группы
 # =========================
+@router.get(
+    "/teacher/group/{group_id}/students",
+    response_model=TeacherGroupStudentListResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_teacher_group_students(
+    group_id: int,
+    service: GroupMemberService = Depends(get_group_member_service),
+    principal: CurrentPrincipal = Depends(get_current_principal),
+):
+    if principal.role is not RoleType.TEACHER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    try:
+        return await service.get_teacher_group_students(principal.user_id, group_id)
+    except PermissionError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden") from None
+    except RuntimeError:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Student profile authorization unavailable") from None
+
 @router.get(
     "/teacher/student/{student_id}",
     response_model=TeacherStudentProfileResponse,

@@ -110,14 +110,39 @@ class GroupMemberService:
         if not await self.user_client.has_parent_student_link(parent_user_id, student_user_id):
             raise PermissionError("Parent is not linked to student")
         return await self.repo.get_active_student_memberships(student_user_id)
+    async def get_teacher_group_students(self, teacher_id: int, group_id: int):
+        group = await self.group_repo.get_by_id(group_id)
+        if group is None or group.is_active is not True:
+            raise PermissionError("Group is not active")
+        teacher = await self.repo.get_by_group_user(group_id, teacher_id)
+        if (
+            teacher is None
+            or teacher.role != "teacher"
+            or teacher.is_active is not True
+            or teacher.left_at is not None
+        ):
+            raise PermissionError("Teacher is not assigned to group")
+        return await self.get_group_students(group_id, include_private=True)
     async def get_teacher_student_profile(self, teacher_id: int, student_id: int):
         teacher_memberships = await self.repo.get_by_user(teacher_id)
         allowed = False
         for membership in teacher_memberships:
-            if membership.role != "teacher" or not membership.is_active:
+            if (
+                membership.role != "teacher"
+                or membership.is_active is not True
+                or membership.left_at is not None
+            ):
+                continue
+            group = await self.group_repo.get_by_id(membership.group_id)
+            if group is None or group.is_active is not True:
                 continue
             student_membership = await self.repo.get_by_group_user(membership.group_id, student_id)
-            if student_membership and student_membership.role == "student" and student_membership.is_active:
+            if (
+                student_membership
+                and student_membership.role == "student"
+                and student_membership.is_active is True
+                and student_membership.left_at is None
+            ):
                 allowed = True
                 break
         if not allowed:
@@ -127,7 +152,7 @@ class GroupMemberService:
             raise LookupError("Student profile not found")
         return profile
 
-    async def get_group_students(self, group_id: int):
+    async def get_group_students(self, group_id: int, *, include_private: bool = False):
         group = await self.group_repo.get_by_id(group_id)
 
         if not group:
@@ -163,7 +188,7 @@ class GroupMemberService:
             profile = profiles_by_id.get(member.user_id)
             if profile is None:
                 continue
-            items.append({
+            item = {
                 "membership_id": member.id,
                 "group_id": member.group_id,
                 "user_id": member.user_id,
@@ -171,12 +196,15 @@ class GroupMemberService:
                 "first_name": profile.get("first_name"),
                 "last_name": profile.get("last_name"),
                 "avatar_url": profile.get("avatar_url"),
-                "phone_number": profile.get("phone_number"),
-                "email": profile.get("email"),
-                "about": profile.get("about"),
                 "is_active": member.is_active,
-            })
-
+            }
+            if include_private:
+                item.update({
+                    "phone_number": profile.get("phone_number"),
+                    "email": profile.get("email"),
+                    "about": profile.get("about"),
+                })
+            items.append(item)
         items.sort(
             key=lambda item: (
                 (

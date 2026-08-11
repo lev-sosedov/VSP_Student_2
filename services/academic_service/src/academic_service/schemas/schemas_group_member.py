@@ -95,9 +95,6 @@ class GroupStudentResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     avatar_url: Optional[str] = None
-    phone_number: Optional[str] = None
-    email: Optional[str] = None
-    about: Optional[str] = None
 
     is_active: bool
 
@@ -118,3 +115,14 @@ class TeacherStudentProfileResponse(BaseModel):
     email: Optional[str] = None
     about: Optional[str] = None
     is_active: bool
+
+
+class TeacherGroupStudentResponse(GroupStudentResponse):
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    about: Optional[str] = None
+
+
+class TeacherGroupStudentListResponse(BaseModel):
+    total: int
+    items: list[TeacherGroupStudentResponse]
